@@ -1,18 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NclVaultAPIServer.Data;
 using NclVaultAPIServer.Middlewares;
@@ -39,34 +33,38 @@ namespace NclVaultAPIServer
             services.AddControllers();
 
             // Configures the authentication section with JWT
-            services.AddAuthentication(options => {
+            services.AddAuthentication(options =>
+            {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options => {
+            }).AddJwtBearer(options =>
+            {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = false,
                     ValidateIssuerSigningKey = true,
 
-                    //Importante: indicare lo stesso Issuer, Audience e chiave segreta
-                    //usati anche nel JwtTokenMiddleware
+                    // Declares he JWTProperties. Use the same inside the Middleware
                     ValidIssuer = Configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:ISSUER"),
                     IssuerSigningKey = new SymmetricSecurityKey(
                       Encoding.UTF8.GetBytes(Configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:SIGNING_KEY"))
                   ),
-                    //Tolleranza sulla data di scadenza del token
+
+                    // Disables all time tollerance
                     ClockSkew = TimeSpan.Zero
                 };
             });
 
+            // Adds the database connection properties to services scoped pool
             services.AddScoped<DbConnProperties, DbConnProperties>();
-
+            // Adds the database contect
             services.AddDbContext<VaultDbContext>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -76,10 +74,14 @@ namespace NclVaultAPIServer
 
             app.UseRouting();
 
+            // Configures the JWTMiddleware
             app.UseMiddleware<JwtTokenMiddleware>();
-            
-            app.UseAuthentication(); // this one first
 
+            // Configures the authentication campability.
+            // Declare this befor the Authorization
+            app.UseAuthentication();
+
+            // Configures the authorization campability
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -87,7 +89,7 @@ namespace NclVaultAPIServer
                 endpoints.MapControllers();
             });
 
-            
+
         }
     }
 }

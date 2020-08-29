@@ -19,10 +19,12 @@ using NclVaultAPIServer.Utils;
 
 namespace NclVaultAPIServer.Controllers
 {
-    
+    /// <summary>
+    /// Manages the vault entries
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
-    
+
     public class VaultController : ControllerBase
     {
         #region Members
@@ -31,23 +33,29 @@ namespace NclVaultAPIServer.Controllers
         private readonly IConfiguration _configuration;
         #endregion
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="vaultDbContext">The DB context</param>
+        /// <param name="mapper">The Mapper service</param>
+        /// <param name="configuration">The application configuration</param>
         public VaultController(VaultDbContext vaultDbContext, IMapper mapper, IConfiguration configuration)
         {
             _vaultDbContext = vaultDbContext;
             _mapper = mapper;
             _configuration = configuration;
 
-            
+
         }
 
-        
+
         //GET /initvault/{STRING_Username} - 
         [HttpGet]
         [Route("initvault/{STRING_Username}")]
         public ActionResult<CredentialReadDto> InitVault(string STRING_Username)
         {
             // Checks if the vault has just an user
-            if(_vaultDbContext.Credentials.Count() > 0)
+            if (_vaultDbContext.Credentials.Count() > 0)
             {
                 // Returns 401
                 return Unauthorized();
@@ -80,6 +88,7 @@ namespace NclVaultAPIServer.Controllers
                 return BadRequest();
             }
 
+            // Checks if there is just another registered user
             if (_vaultDbContext.Credentials.Count() > 0)
             {
                 return Unauthorized();
@@ -99,21 +108,22 @@ namespace NclVaultAPIServer.Controllers
             _vaultDbContext.SaveChanges();
 
             // Returns the stored Credential
-            return Ok(new InitResponse { Username = credential.Username, InitId = Guid.NewGuid().ToString()});
+            return Ok(new InitResponse { Username = credential.Username, InitId = Guid.NewGuid().ToString() });
         }
-        
-        
+
+
         //POST /create/password
         [HttpPost]
         [Route("create/password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public IActionResult CreatePassword([FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
 
+            // Extract the Credential element that has the same username received
             Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
 
             if (null == selectedCredential)
@@ -121,14 +131,16 @@ namespace NclVaultAPIServer.Controllers
                 return Unauthorized();
             }
 
-            /* Sets the encrypted password */
+            /* Sets the encrypted password using the InitId request header parameter as key*/
             passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
             PasswordEntry passwordEntry = _mapper.Map<PasswordEntry>(passwordEntryCreateDto);
-            
+
+            // Adds the entry password to EF and writes to the databae
             _vaultDbContext.Passwords.Add(passwordEntry);
             _vaultDbContext.SaveChanges();
-            
-            return CreatedAtAction(nameof(ReadPasswordById),new { ID = passwordEntry.Id }, passwordEntry);
+
+            // After, redirect the browser to the ReadPasswordById Action(see the below function)
+            return CreatedAtAction(nameof(ReadPasswordById), new { ID = passwordEntry.Id }, passwordEntry);
         }
 
 
@@ -139,16 +151,16 @@ namespace NclVaultAPIServer.Controllers
             {
                 return BadRequest();
             }
-
+            // Extracts the PasswordEntry that has the received ID
             PasswordEntry passwordEntry = _vaultDbContext.Passwords.SingleOrDefault(password => password.Id == id);
-            if(null == passwordEntry)
+            if (null == passwordEntry)
             {
                 return NotFound();
             }
 
 
-
-            return _mapper.Map<PasswordEntryReadDto>(passwordEntry); 
+            // Returns the mapped PasswordEntry
+            return _mapper.Map<PasswordEntryReadDto>(passwordEntry);
         }
 
         //GET read/password/{id}
@@ -162,21 +174,26 @@ namespace NclVaultAPIServer.Controllers
                 return BadRequest();
             }
 
+            // Extracts the PasswordEntry that has the received ID
             PasswordEntry passwordEntry = _vaultDbContext.Passwords.SingleOrDefault(password => password.Id == id);
-            
+
             if (null == passwordEntry)
             {
                 return NotFound();
             }
+
+            // Extract the Credential element that has the same username received
             Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
 
-            if(null == selectedCredential)
+            if (null == selectedCredential)
             {
                 return Unauthorized();
             }
 
+            // Decrypts the password using the InitId request header parameter as key
             passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
 
+            // Returns the PasswordEntry object
             return Ok(_mapper.Map<PasswordEntryReadDto>(passwordEntry));
         }
 
@@ -196,6 +213,7 @@ namespace NclVaultAPIServer.Controllers
                 return NotFound();
             }
 
+            // Extract the Credential element that has the same username received
             Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
 
             if (null == selectedCredential)
@@ -203,15 +221,17 @@ namespace NclVaultAPIServer.Controllers
                 return Unauthorized();
             }
 
+            // Iterates over all PasswordEntry elements
             foreach (PasswordEntry passwordEntry in _vaultDbContext.Passwords)
             {
+                // Decrypts the password using the InitId request header parameter as key
                 passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
             }
-            
 
+            // Returns the Mapped List<PasswordEntry> objects
             return Ok(_mapper.Map<List<PasswordEntryReadDto>>(_vaultDbContext.Passwords));
         }
 
-        
+
     }
 }
