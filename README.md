@@ -1,6 +1,6 @@
 # NclVault
 
-![banner]((https://github.com/nocommentlab/NclVault/blob/master/readme_media/banner.jpg?raw=true))
+![banner](https://raw.githubusercontent.com/nocommentlab/NclVault/master/readme_media/banner.jpg)
 
 NclVault is an open source project written by the *!//Lab* completely in .Net Core. It runs on Windows, Mac and Linux.
 
