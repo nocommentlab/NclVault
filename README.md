@@ -3,6 +3,7 @@
 ![banner](https://raw.githubusercontent.com/nocommentlab/NclVault/master/readme_media/banner.jpg)
 
 NclVault is an open source project written by the **!//Lab** completely in .Net Core. It runs on Windows, Mac and Linux.
+**The NclVault is under development, you could lost your data, use it and pay attention!** 
 
 ## tl;dr
 
@@ -16,4 +17,6 @@ NclVault is completely written in ASP.Net core API and allows you to store your 
 ## How it works
 
 coming soon...
+
+
 
