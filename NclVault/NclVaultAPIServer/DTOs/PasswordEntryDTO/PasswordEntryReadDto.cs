@@ -20,6 +20,6 @@ namespace NclVaultAPIServer.DTOs.PasswordEntryDTO
         public string Username { get; set; }
         [Required]
         public string Password { get; set; }
-        public Url Url { get; set; }
+        public string Url { get; set; }
     }
 }

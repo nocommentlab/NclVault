@@ -41,7 +41,7 @@ namespace NclVaultAPIServer.Controllers
         }
 
         
-        //GET /initvault/{STRING_Username}
+        //GET /initvault/{STRING_Username} - 
         [HttpGet]
         [Route("initvault/{STRING_Username}")]
         public ActionResult<CredentialReadDto> InitVault(string STRING_Username)
@@ -69,9 +69,10 @@ namespace NclVaultAPIServer.Controllers
 
         }
 
+        //POST /initvault
         [HttpPost]
         [Route("initvault")]
-        public IActionResult InitVault([FromBody] CredentialCreateDto credentialCreateDto)
+        public ActionResult<InitResponse> InitVault([FromBody] CredentialCreateDto credentialCreateDto)
         {
 
             if (!ModelState.IsValid)
@@ -85,21 +86,24 @@ namespace NclVaultAPIServer.Controllers
             }
 
             // Creates a Credential object
-            Credential credential = new Credential();
-            // Sets the passed Username
-            credential.Username = credentialCreateDto.Username;
-            // Sets the passed Password - Sha256(<passed_password>+salt)
-            credential.Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"));
+            Credential credential = new Credential
+            {
+                // Sets the passed Username
+                Username = credentialCreateDto.Username,
+                // Sets the passed Password - Sha256(<passed_password>+salt)
+                Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"))
+            };
 
             // Adds the element to Credential table and save
             _vaultDbContext.Credentials.Add(credential);
             _vaultDbContext.SaveChanges();
 
             // Returns the stored Credential
-            return Ok();
+            return Ok(new InitResponse { Username = credential.Username, InitId = Guid.NewGuid().ToString()});
         }
         
         
+        //POST /create/password
         [HttpPost]
         [Route("create/password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -110,7 +114,15 @@ namespace NclVaultAPIServer.Controllers
                 return BadRequest();
             }
 
-            passwordEntryCreateDto.Password = Utils.CryptoHelper.EncryptString(passwordEntryCreateDto.Password, _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "ENTRY_ENC_KEY").ToString());
+            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+
+            if (null == selectedCredential)
+            {
+                return Unauthorized();
+            }
+
+            /* Sets the encrypted password */
+            passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
             PasswordEntry passwordEntry = _mapper.Map<PasswordEntry>(passwordEntryCreateDto);
             
             _vaultDbContext.Passwords.Add(passwordEntry);
@@ -118,6 +130,7 @@ namespace NclVaultAPIServer.Controllers
             
             return CreatedAtAction(nameof(ReadPasswordById),new { ID = passwordEntry.Id }, passwordEntry);
         }
+
 
         [ActionName("ReadPasswordById")]
         public ActionResult<PasswordEntryReadDto> ReadPasswordById(int id)
@@ -138,6 +151,7 @@ namespace NclVaultAPIServer.Controllers
             return _mapper.Map<PasswordEntryReadDto>(passwordEntry); 
         }
 
+        //GET read/password/{id}
         [HttpGet]
         [Route("read/password/{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -154,19 +168,50 @@ namespace NclVaultAPIServer.Controllers
             {
                 return NotFound();
             }
+            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
 
-            passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "ENTRY_ENC_KEY").ToString());
+            if(null == selectedCredential)
+            {
+                return Unauthorized();
+            }
+
+            passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
 
             return Ok(_mapper.Map<PasswordEntryReadDto>(passwordEntry));
         }
 
+        //GET read/password
         [HttpGet]
-        [Route("test")]
+        [Route("read/password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public ActionResult Test()
+        public ActionResult<List<PasswordEntryReadDto>> DecryptedReadPassword()
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            if (_vaultDbContext.Passwords.Count() == 0)
+            {
+                return NotFound();
+            }
+
+            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+
+            if (null == selectedCredential)
+            {
+                return Unauthorized();
+            }
+
+            foreach (PasswordEntry passwordEntry in _vaultDbContext.Passwords)
+            {
+                passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
+            }
             
-            return Ok();
+
+            return Ok(_mapper.Map<List<PasswordEntryReadDto>>(_vaultDbContext.Passwords));
         }
+
+        
     }
 }

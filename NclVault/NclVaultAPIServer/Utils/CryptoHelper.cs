@@ -41,8 +41,12 @@ namespace NclVaultAPIServer.Utils
         /// <returns></returns>
         public static string EncryptString(string text, string keyString/*, ref byte[] vBYTE_GeneratedIV*/)
         {
+            /* Adapts the password lenght */
+            keyString = (keyString.Length > 32) ? keyString.Substring(0, 32) : keyString.PadLeft(32, '*');
+            
             var key = Encoding.UTF8.GetBytes(keyString);
-
+            
+           
             using (var aesAlg = Aes.Create())
             {
                 /*vBYTE_GeneratedIV = new byte[aesAlg.IV.Length];
@@ -81,6 +85,9 @@ namespace NclVaultAPIServer.Utils
         /// <returns></returns>
         public static string DecryptString(string cipherText, string keyString)
         {
+            /* Adapts the password lenght */
+            keyString = (keyString.Length > 32) ? keyString.Substring(0, 32) : keyString.PadLeft(32, '*');
+
             var fullCipher = Convert.FromBase64String(cipherText);
 
             var iv = new byte[16];

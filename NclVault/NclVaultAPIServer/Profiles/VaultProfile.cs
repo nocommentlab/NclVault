@@ -16,6 +16,8 @@ namespace NclVaultAPIServer.Profiles
             CreateMap<Credential, CredentialReadDto>();
             CreateMap<PasswordEntryCreateDto, PasswordEntry>();
             CreateMap<PasswordEntry, PasswordEntryReadDto>();
+
+            CreateMap<List<PasswordEntry>, List<PasswordEntryReadDto>>();
         }
     }
 }

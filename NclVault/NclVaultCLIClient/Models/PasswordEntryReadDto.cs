@@ -1,23 +1,26 @@
-﻿using System;
+﻿using NclVaultCLIClient.Attributes;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Security.Policy;
-using System.Threading.Tasks;
+using System.Text;
 
-namespace NclVaultAPIServer.DTOs.PasswordEntryDTO
+namespace NclVaultCLIClient.Models
 {
-    public class PasswordEntryCreateDto
+    public class PasswordEntryReadDto
     {
+        [Printable]
+        public int Id { get; set; }
+        [Printable]
         public string Group { get; set; }
-        [Required]
+        [Printable]
         public string Name { get; set; }
+        [Printable]
         public DateTime Expired { get; set; }
         public string Notes { get; set; }
-        [Required]
+        [Printable]
         public string Username { get; set; }
-        [Required]
+        [Printable]
         public string Password { get; set; }
+        [Printable]
         public string Url { get; set; }
     }
 }

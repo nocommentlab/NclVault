@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -14,9 +15,12 @@ namespace NclVaultAPIServer.Middlewares
     public class JwtTokenMiddleware
     {
         private readonly RequestDelegate next;
-        public JwtTokenMiddleware(RequestDelegate next)
+        private readonly IConfiguration _configuration;
+
+        public JwtTokenMiddleware(RequestDelegate next, IConfiguration configuration)
         {
             this.next = next;
+            _configuration = configuration;
         }
         public async Task Invoke(HttpContext context)
         {
@@ -39,12 +43,12 @@ namespace NclVaultAPIServer.Middlewares
         //In questo metodo creiamo il token a partire dai claim della ClaimsIdentity
         private StringValues CreateTokenForIdentity(ClaimsIdentity identity)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("MiaChiaveSegreta"));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:SIGNING_KEY")));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
-            issuer: "NCLVault",
+            issuer: _configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:ISSUER"),
               claims: identity.Claims,
-              expires: DateTime.Now.AddMinutes(20),
+              expires: DateTime.Now.AddMinutes(_configuration.GetValue<int>("NCLVaultConfiguration:JWTConfiguration:TOKEN_INACTIVITY_EXPIRATION")),
               signingCredentials: credentials
             );
             var tokenHandler = new JwtSecurityTokenHandler();

@@ -31,9 +31,14 @@ namespace NclVaultAPIServer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
+            // Configures automapper configuration assembly
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
+            // Adds the controllers
             services.AddControllers();
+
+            // Configures the authentication section with JWT
             services.AddAuthentication(options => {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options => {
@@ -45,9 +50,9 @@ namespace NclVaultAPIServer
 
                     //Importante: indicare lo stesso Issuer, Audience e chiave segreta
                     //usati anche nel JwtTokenMiddleware
-                    ValidIssuer = "NCLVault",
+                    ValidIssuer = Configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:ISSUER"),
                     IssuerSigningKey = new SymmetricSecurityKey(
-                      Encoding.UTF8.GetBytes("MiaChiaveSegreta")
+                      Encoding.UTF8.GetBytes(Configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:SIGNING_KEY"))
                   ),
                     //Tolleranza sulla data di scadenza del token
                     ClockSkew = TimeSpan.Zero
@@ -72,13 +77,17 @@ namespace NclVaultAPIServer
             app.UseRouting();
 
             app.UseMiddleware<JwtTokenMiddleware>();
+            
             app.UseAuthentication(); // this one first
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
             });
+
+            
         }
     }
 }
