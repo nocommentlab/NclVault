@@ -17,4 +17,15 @@ NclVault is completely written in ASP.Net core API and allows you to store your 
 
 ## How it works
 
-coming soon...
+This repository contains two projects:
+
+- NclVaultAPIServer: this is the core. Written in ASP.Net Core API, it exposes the REST API that the clients connect to.
+- NclVaultCLIClient: a simple .net core console application used to demonstrate how the API core server works.
+
+## NclVaultAPIServer
+
+### initvault Workflow
+
+![initvault_workflow](https://raw.githubusercontent.com/nocommentlab/NclVault/master/readme_media/initvault_workflow.gif)
+
+to be continued....
