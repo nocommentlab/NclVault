@@ -55,8 +55,6 @@ namespace NclVaultAPIServer
                 };
             });
 
-            // Adds the database connection properties to services scoped pool
-            services.AddScoped<DbConnProperties, DbConnProperties>();
             // Adds the database contect
             services.AddDbContext<VaultDbContext>();
         }

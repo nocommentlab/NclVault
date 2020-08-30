@@ -12,7 +12,7 @@ namespace NclVaultAPIServer.Data
     public class VaultDbContext : DbContext
     {
         #region Members
-        private readonly string STRING_DatabaseName = "vault.db";
+        private readonly string _STRING_DatabaseName = "vault.db";
         private readonly IConfiguration _configuration;
         private SqliteConnection _sqliteConnection = null;
         #endregion
@@ -23,22 +23,24 @@ namespace NclVaultAPIServer.Data
 
         #endregion
 
-        public VaultDbContext(DbConnProperties dbConnProperties, IConfiguration configuration)
+        public VaultDbContext(IConfiguration configuration)
         {
-            if (!string.IsNullOrEmpty(dbConnProperties.STRING_Filename)) STRING_DatabaseName = dbConnProperties.STRING_Filename;
             _configuration = configuration;
+
+            /* Gets the database filename from the configuration file */
+            _STRING_DatabaseName = _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_VAULT_FILENAME").ToString();// dbConnProperties.STRING_Filename;
         }
 
         public VaultDbContext(SqliteConnection sqliteConnection)
         {
-            if (!string.IsNullOrEmpty(sqliteConnection?.DataSource)) STRING_DatabaseName = sqliteConnection.DataSource;
+            if (!string.IsNullOrEmpty(sqliteConnection?.DataSource)) _STRING_DatabaseName = sqliteConnection.DataSource;
 
             _sqliteConnection = sqliteConnection;
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            _sqliteConnection ??= InitializeSQLiteConnection(STRING_DatabaseName, _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_ENCRYPTION_KEY").ToString());
+            _sqliteConnection ??= InitializeSQLiteConnection(_STRING_DatabaseName, _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_ENCRYPTION_KEY").ToString());
             options.UseSqlite(_sqliteConnection);
         }
 
@@ -47,8 +49,9 @@ namespace NclVaultAPIServer.Data
             var connectionString = new SqliteConnectionStringBuilder
             {
                 DataSource = databaseFile,
-                Password = STRING_EncryptionKey// PRAGMA key is being sent from EF Core directly after opening the connection
+                Password = STRING_EncryptionKey// Sets the database encryption key
             };
+
             return new SqliteConnection(connectionString.ToString());
         }
 
