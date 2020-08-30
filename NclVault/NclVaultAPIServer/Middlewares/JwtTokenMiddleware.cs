@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 
 namespace NclVaultAPIServer.Middlewares
 {
+    /// <summary>
+    /// The JWTMiddleware class
+    /// </summary>
     public class JwtTokenMiddleware
     {
         private readonly RequestDelegate next;
@@ -24,15 +27,18 @@ namespace NclVaultAPIServer.Middlewares
         }
         public async Task Invoke(HttpContext context)
         {
-            context.Response.OnStarting(() => {
+            context.Response.OnStarting(() =>
+            {
                 var identity = context.User.Identity as ClaimsIdentity;
 
-                //Se la richiesta era autenticata, allora creiamo un nuovo token JWT
+                // Checks if the request is authenticated
                 if (identity.IsAuthenticated)
                 {
-                    //Il client potrà usare questo nuovo token nella sua prossima richiesta
+
+                    // Generates the new JWT token that will be used from the client
                     var token = CreateTokenForIdentity(identity);
-                    //Usiamo l'intestazione X-Token, ma non è obbligatorio che si chiami così
+
+                    // Adds the new Token inside the X-Token server response header
                     context.Response.Headers.Add("X-Token", token);
                 }
                 return Task.CompletedTask;
@@ -40,17 +46,25 @@ namespace NclVaultAPIServer.Middlewares
             await next.Invoke(context);
         }
 
-        //In questo metodo creiamo il token a partire dai claim della ClaimsIdentity
+        /// <summary>
+        /// Generates the token with the given ClaimsIdentity
+        /// </summary>
+        /// <param name="identity"></param>
+        /// <returns></returns>
         private StringValues CreateTokenForIdentity(ClaimsIdentity identity)
         {
+            // Generates the SymmetricSecurityKey used to sign the token
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:SIGNING_KEY")));
+            // Uses the HMAC SHA256 signing alghoritm
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            // Configures the JWT Token
             var token = new JwtSecurityToken(
             issuer: _configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:ISSUER"),
               claims: identity.Claims,
               expires: DateTime.Now.AddMinutes(_configuration.GetValue<int>("NCLVaultConfiguration:JWTConfiguration:TOKEN_INACTIVITY_EXPIRATION")),
               signingCredentials: credentials
             );
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var serializedToken = tokenHandler.WriteToken(token);
             return serializedToken;

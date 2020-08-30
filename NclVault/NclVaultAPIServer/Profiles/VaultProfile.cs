@@ -11,6 +11,9 @@ namespace NclVaultAPIServer.Profiles
 {
     public class VaultProfile: Profile
     {
+        /// <summary>
+        /// The Automapper Vault Profile
+        /// </summary>
         public VaultProfile()
         {
             CreateMap<Credential, CredentialReadDto>();

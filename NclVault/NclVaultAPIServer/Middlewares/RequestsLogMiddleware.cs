@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace NclVaultAPIServer.Middlewares
 {
+    /// <summary>
+    /// NOT YET IMPLEMENTED - I Think that I can use this middleware to logs access to ELK? 😎
+    /// https://elanderson.net/2019/12/log-requests-and-responses-in-asp-net-core-3/
+    /// </summary>
     public class RequestsLogMiddleware
     {
         private readonly RequestDelegate _next;
