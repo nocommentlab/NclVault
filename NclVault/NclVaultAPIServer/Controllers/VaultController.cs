@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -143,6 +144,61 @@ namespace NclVaultAPIServer.Controllers
             return CreatedAtAction(nameof(ReadPasswordById), new { ID = passwordEntry.Id }, passwordEntry);
         }
 
+        //PUT /update/password/{id}
+        [HttpPut]
+        [Route("update/password/{id}")]
+        public IActionResult UpdatePassword(int id, [FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            // Extract the Credential element that has the same username received
+            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+
+            if (null == selectedCredential)
+            {
+                return Unauthorized();
+            }
+
+            // Extract the password entry with the requested ID
+            PasswordEntry passwordEntry = _vaultDbContext.Passwords.FirstOrDefault(element => element.Id == id);
+            if(null == passwordEntry)
+            {
+                return NotFound();
+            }
+
+            /* Sets the encrypted password using the InitId request header parameter as key*/
+            passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+
+            _mapper.Map(passwordEntryCreateDto, passwordEntry);
+            _vaultDbContext.SaveChanges();
+
+            
+            return CreatedAtAction(nameof(ReadPasswordById), new { ID = passwordEntry.Id }, passwordEntry);
+        }
+
+        [HttpDelete]
+        [Route("delete/password/{id}")]
+        public IActionResult DeletePassword(int id)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+            // Extracts the PasswordEntry that has the received ID
+            PasswordEntry passwordEntry = _vaultDbContext.Passwords.SingleOrDefault(password => password.Id == id);
+            if (null == passwordEntry)
+            {
+                return NotFound();
+            }
+
+            _vaultDbContext.Passwords.Remove(passwordEntry);
+            _vaultDbContext.SaveChanges();
+
+            return Ok();
+        }
 
         [ActionName("ReadPasswordById")]
         public ActionResult<PasswordEntryReadDto> ReadPasswordById(int id)
@@ -160,7 +216,7 @@ namespace NclVaultAPIServer.Controllers
 
 
             // Returns the mapped PasswordEntry
-            return _mapper.Map<PasswordEntryReadDto>(passwordEntry);
+            return  _mapper.Map<PasswordEntryReadDto>(passwordEntry);
         }
 
         //GET read/password/{id}
