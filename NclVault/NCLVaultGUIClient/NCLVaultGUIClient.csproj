@@ -40,6 +40,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Security" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -58,6 +59,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Views\Home.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\InitDatabaseView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -72,17 +77,15 @@
     </Compile>
     <Compile Include="Commands\DoInitCommand.cs" />
     <Compile Include="Commands\DoLoginCommand.cs" />
+    <Compile Include="Converters\VisibilityConverter.cs" />
     <Compile Include="Interfaces\IInitViewModel.cs" />
     <Compile Include="Interfaces\ILoginViewModel.cs" />
     <Compile Include="Models\Credential.cs" />
-    <Compile Include="Models\HttpResponseResult.cs" />
-    <Compile Include="Models\InitResponse.cs" />
-    <Compile Include="Models\LoginResponseResult.cs" />
-    <Compile Include="Models\PasswordEntryCreateDto.cs" />
-    <Compile Include="Models\PasswordEntryReadDto.cs" />
-    <Compile Include="Utils\BackendInterface.cs" />
     <Compile Include="ViewModels\InitDatabaseViewModel.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
+    <Compile Include="Views\Home.xaml.cs">
+      <DependentUpon>Home.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\InitDatabaseView.xaml.cs">
       <DependentUpon>InitDatabaseView.xaml</DependentUpon>
     </Compile>
@@ -118,6 +121,14 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\NCLVaultFramework\NCLVaultFramework.csproj">
+      <Project>{7f7ef141-26ef-46dd-8b57-173771a0fee1}</Project>
+      <Name>NCLVaultFramework</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Utils\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

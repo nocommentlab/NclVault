@@ -15,6 +15,7 @@
     <Window.Resources>
         <system:String x:Key="strUsername">Username</system:String>
         <system:String x:Key="strPassword">Password</system:String>
+        <system:String x:Key="strInitId">InitId</system:String>
         <system:String x:Key="strInit">Init</system:String>
     </Window.Resources>
     <!-- UI -->
@@ -24,7 +25,10 @@
             <TextBox x:Name="uiTxtUsername" Text="{Binding InitCredential.Username}"/>
             <Label Content="{StaticResource strPassword}"/>
             <TextBox x:Name="uiTxtPassword" Text="{Binding InitCredential.Password}"/>
-            <Button Margin="25,10,25,0" Content="{StaticResource strInit}" Command="{Binding Path=DoInitCommand}" CommandParameter="{Binding InitCredential}"/>
+            <Label Content="{StaticResource strInitId}"/>
+            <TextBox Text="{Binding STRING_InitId}" IsReadOnly="True" TextAlignment="Center"></TextBox>
+            <Button Margin="25,10,25,0" Content="{StaticResource strInit}" Command="{Binding Path=InitCommand}" CommandParameter="{Binding InitCredential}"/>
+            
         </StackPanel>
     </Grid>
 </Window>

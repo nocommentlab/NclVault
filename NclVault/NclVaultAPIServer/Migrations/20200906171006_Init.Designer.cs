@@ -9,7 +9,7 @@ using NclVaultAPIServer.Data;
 namespace NclVaultAPIServer.Migrations
 {
     [DbContext(typeof(VaultDbContext))]
-    [Migration("20200904154919_Init")]
+    [Migration("20200906171006_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

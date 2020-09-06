@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:NCLVaultGUIClient"
         xmlns:mv="clr-namespace:NCLVaultGUIClient.ViewModels"
         xmlns:system="clr-namespace:System;assembly=mscorlib"
+        xmlns:cv="clr-namespace:NCLVaultGUIClient.Converters"
         mc:Ignorable="d"
         Title="Login" Height="450" Width="250">
     <!-- DataContext Declaration -->
@@ -17,8 +18,15 @@
         <system:String x:Key="strUsername">Username</system:String>
         <system:String x:Key="strPassword">Password</system:String>
         <system:String x:Key="strInit">or init the database</system:String>
+        <!-- Declares the visibility converter used with the Window.Visibility property -->
+        <cv:VisibilityConverter x:Key="VisibilityConverter"/>
     </Window.Resources>
-    
+    <!-- Window Visibility Property Binding Declaration.
+         Sets this property otherwise will gets an exception
+    -->
+    <Window.Visibility>
+        <Binding Mode="TwoWay" Path="IsWindowVisible" Converter="{StaticResource VisibilityConverter}"/>
+    </Window.Visibility>
     <!-- UI -->
     <Grid>
         <StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="50,0">
@@ -27,8 +35,8 @@
             <Label Content="{StaticResource strPassword}"/>
             <TextBox x:Name="uiTxtPassword" Text="{Binding LoginCredential.Password}"/>
             <Button Margin="25,10,25,0"  x:Name="uiBtnLogin" Content="LOGIN" Command="{Binding Path=LoginCommand}" CommandParameter="{Binding LoginCredential}"/>
-            <Label HorizontalAlignment="center" Padding="0,10,0,0,">
-                <Hyperlink Name="DemoHyperlink" >
+            <Label HorizontalAlignment="center" x:Name="uiLblInitDatabase" MouseDoubleClick="Label_MouseDoubleClick" Padding="0,10,0,0" >
+                <Hyperlink  >
                     <Label Content="{StaticResource strInit}"/>
                 </Hyperlink>
             </Label>

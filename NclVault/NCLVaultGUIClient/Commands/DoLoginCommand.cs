@@ -1,6 +1,4 @@
-﻿using NclVaultCLIClient.Controllers;
-using NclVaultCLIClient.Models;
-using NCLVaultGUIClient.Interfaces;
+﻿using NCLVaultGUIClient.Interfaces;
 using NCLVaultGUIClient.Models;
 using System;
 using System.Collections.Generic;
@@ -16,7 +14,7 @@ namespace NCLVaultGUIClient.Commands
     {
 
         #region Members
-        private ILoginViewModel _loginViewModel;
+        private readonly ILoginViewModel _loginViewModel;
         public event EventHandler CanExecuteChanged { add { } remove { } }
         #endregion
 

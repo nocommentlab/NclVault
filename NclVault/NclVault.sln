@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NclVaultCLIClient", "NclVau
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NCLVaultGUIClient", "NCLVaultGUIClient\NCLVaultGUIClient.csproj", "{5DCED04A-6EC8-4700-A549-CA1788FA75CD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NCLVaultFramework", "NCLVaultFramework\NCLVaultFramework.csproj", "{7F7EF141-26EF-46DD-8B57-173771A0FEE1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{5DCED04A-6EC8-4700-A549-CA1788FA75CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5DCED04A-6EC8-4700-A549-CA1788FA75CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5DCED04A-6EC8-4700-A549-CA1788FA75CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

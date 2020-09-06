@@ -13,7 +13,7 @@ namespace NCLVaultGUIClient.Commands
     {
         #region Members
         public event EventHandler CanExecuteChanged { add { } remove { } }
-        private IInitViewModel _initViewModel;
+        private readonly IInitViewModel _initViewModel;
         #endregion
 
         #region Properties

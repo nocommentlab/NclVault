@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace NclVaultCLIClient.Models
+namespace NclVaultFramework.Models
 {
     public class PasswordEntryCreateDto
     {

@@ -1,17 +1,15 @@
-﻿using NclVaultCLIClient.Models;
+﻿using NclVaultFramework.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NclVaultCLIClient.Controllers
+namespace NclVaultFramework.Controllers
 {
     public class BackendInterface
     {
@@ -25,7 +23,7 @@ namespace NclVaultCLIClient.Controllers
 
         #endregion
         #region Members
-        private HttpClient _httpClient;
+        private readonly HttpClient _httpClient;
         private static BackendInterface _backendInterface;
         #endregion
 
@@ -37,7 +35,7 @@ namespace NclVaultCLIClient.Controllers
 
         public static BackendInterface GetInstance()
         {
-            if(null == _backendInterface)
+            if (null == _backendInterface)
             {
                 _backendInterface = new BackendInterface();
             }
@@ -67,24 +65,31 @@ namespace NclVaultCLIClient.Controllers
         public async Task<HTTPResponseResult> Login(object body, string STRING_InitIdKey)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
-            string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(body);
-
-            _httpClient.DefaultRequestHeaders.Add("InitId", STRING_InitIdKey);
-            
-
-            HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(LOGIN_API_ENDPOINT_URL,
-                                   new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
-
-            httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
-            httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
-            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+            try
             {
-                httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
 
-                
+                string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(body);
+
+                _httpClient.DefaultRequestHeaders.Add("InitId", STRING_InitIdKey);
+
+
+                HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(LOGIN_API_ENDPOINT_URL,
+                                       new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
+
+                httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
+                httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+                if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+                {
+                    httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
+
+
+                }
             }
-            
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message);
+            }
             return httpResponseResult;
         }
 
@@ -93,14 +98,14 @@ namespace NclVaultCLIClient.Controllers
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
 
 
-            
 
-            
+
+
             HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync(String.Format(READ_PASSWORD_API_ENDPOINT_URL, INT32_Id));
 
             httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
             httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
-            
+
             string responseContent = await httpResponseMessage.Content.ReadAsStringAsync();
             httpResponseResult.OBJECT_RestResult = JsonConvert.DeserializeObject<PasswordEntryReadDto>(responseContent);
 

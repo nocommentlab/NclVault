@@ -1,5 +1,4 @@
-﻿using NCLVaultGUIClient.ViewModels;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,27 +10,18 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace NCLVaultGUIClient.Views
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Interaction logic for Home.xaml
     /// </summary>
-    public partial class Login : Window
+    public partial class Home : Window
     {
-        public Login()
+        public Home()
         {
             InitializeComponent();
-            
         }
-
-        private void Label_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            new InitDatabaseView().ShowDialog();
-        }
-
-       
     }
 }
