@@ -32,6 +32,17 @@ namespace NCLVaultGUIClient.Views
             new InitDatabaseView().ShowDialog();
         }
 
-       
+        /// <summary>
+        /// https://stackoverflow.com/a/25001115
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void uiTxtPassword_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext != null)
+            {
+                 ((dynamic)this.DataContext).LoginCredential.SecurePassword = ((PasswordBox)sender).SecurePassword;
+            }
+        }
     }
 }

@@ -3,6 +3,7 @@ using NCLVaultGUIClient.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,8 +30,8 @@ namespace NCLVaultGUIClient.Commands
             if (null == parameter)
                 return true;
 
-            Credential receivedCredential = (Credential)parameter;
-            return (receivedCredential.Username.Length > 0 && receivedCredential.Password.Length > 0);
+            NetworkCredential receivedCredential = (NetworkCredential)parameter;
+            return (receivedCredential.UserName.Length > 0 && receivedCredential.SecurePassword.Length > 0);
 
         }
 

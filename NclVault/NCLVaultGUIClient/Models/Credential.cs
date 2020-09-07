@@ -1,5 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Security;
+
 namespace NCLVaultGUIClient.Models
 {
     public class Credential : INotifyPropertyChanged

@@ -15,13 +15,21 @@ using System.Windows.Shapes;
 namespace NCLVaultGUIClient.Views
 {
     /// <summary>
-    /// Interaction logic for Home.xaml
+    /// Interaction logic for HomeWindow.xaml
     /// </summary>
-    public partial class Home : Window
+    public partial class HomeWindow : Window
     {
-        public Home()
+        public HomeWindow()
         {
             InitializeComponent();
+        }
+
+        private void uiPbPassword_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (null != this.DataContext)
+            {
+                ((dynamic)this.DataContext).PasswordEntryCreateDto.Password = ((PasswordBox)sender).Password;
+            }
         }
     }
 }

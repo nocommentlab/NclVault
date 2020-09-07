@@ -4,6 +4,12 @@
              xmlns:local="clr-namespace:NCLVaultGUIClient"
              StartupUri="Views/LoginView.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <!-- Declare Implicit Style -->
+            <Style TargetType="Control">
+                <Setter Property="FontFamily" Value="Verdana" />
+            </Style>
+        </ResourceDictionary>
     </Application.Resources>
+
 </Application>

@@ -43,7 +43,7 @@ namespace NclVaultFramework.Controllers
             return _backendInterface;
         }
 
-
+        [Obsolete("UNSECURE Method. Use the Login(NetworkCredential) implementation")]
         public async Task<HTTPResponseResult> Init(object body)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
@@ -62,6 +62,29 @@ namespace NclVaultFramework.Controllers
 
         }
 
+        public async Task<HTTPResponseResult> Init(NetworkCredential credential)
+        {
+            HTTPResponseResult httpResponseResult = new HTTPResponseResult();
+            string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(new
+            {
+                credential.UserName,
+                credential.Password
+            });
+
+            HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(INIT_API_ENDPOINT_URL,
+                                   new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
+
+            string responseContent = await httpResponseMessage.Content.ReadAsStringAsync();
+            httpResponseResult.OBJECT_RestResult = JsonConvert.DeserializeObject<InitResponse>(responseContent);
+
+            httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
+            httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+
+            return httpResponseResult;
+
+        }
+        
+        [Obsolete("UNSECURE Method. Use the Login(NetworkCredential, String) implementation")]
         public async Task<HTTPResponseResult> Login(object body, string STRING_InitIdKey)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
@@ -69,6 +92,32 @@ namespace NclVaultFramework.Controllers
             {
 
                 string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(body);
+                _httpClient.DefaultRequestHeaders.Add("InitId", STRING_InitIdKey);
+                HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(LOGIN_API_ENDPOINT_URL,
+                                       new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
+
+                httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
+                httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+                if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+                {
+                    httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message);
+            }
+            return httpResponseResult;
+        }
+
+        public async Task<HTTPResponseResult> Login(NetworkCredential credential, string STRING_InitIdKey)
+        {
+            HTTPResponseResult httpResponseResult = new HTTPResponseResult();
+            try
+            {
+
+                string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(new { credential.UserName, credential.Password });
 
                 _httpClient.DefaultRequestHeaders.Add("InitId", STRING_InitIdKey);
 
