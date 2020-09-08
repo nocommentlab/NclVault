@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AutoMapper;
+using NclVaultFramework.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,9 +21,12 @@ namespace NCLVaultGUIClient.Views
     /// </summary>
     public partial class HomeWindow : Window
     {
+        private Mapper _mapper;
         public HomeWindow()
         {
             InitializeComponent();
+            var config = new MapperConfiguration(cfg => cfg.CreateMap<PasswordEntryReadDto, PasswordEntryCreateDto>());
+            _mapper = new Mapper(config);
         }
 
         private void uiPbPassword_PasswordChanged(object sender, RoutedEventArgs e)
@@ -30,6 +35,20 @@ namespace NCLVaultGUIClient.Views
             {
                 ((dynamic)this.DataContext).PasswordEntryCreateDto.Password = ((PasswordBox)sender).Password;
             }
+        }
+
+        private void uiTwPassword_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            
+            if( ((TreeView)sender).SelectedItem !=null && ((TreeView)sender).SelectedItem is PasswordEntryReadDto)
+            {
+                ((dynamic)this.DataContext).PasswordEntryCreateDto = _mapper.Map<PasswordEntryCreateDto>(((TreeView)sender).SelectedItem); 
+            }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(((Button)sender).Tag as string);
         }
     }
 }

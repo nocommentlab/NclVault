@@ -21,12 +21,12 @@ namespace NCLVaultGUIClient.Commands
         }
         public bool CanExecute(object parameter)
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public void Execute(object parameter)
         {
-            throw new NotImplementedException();
+            _doShowPassword.DoShowPassword(parameter);
         }
     }
 }

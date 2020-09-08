@@ -6,6 +6,9 @@
         xmlns:vm="clr-namespace:NCLVaultGUIClient.ViewModels"
         xmlns:system="clr-namespace:System;assembly=mscorlib"
         xmlns:local="clr-namespace:NCLVaultGUIClient.Views"
+        xmlns:vfmodels="clr-namespace:NclVaultFramework.Models;assembly=NCLVaultFramework"
+        xmlns:models="clr-namespace:NCLVaultGUIClient.Models"
+        xmlns:self="clr-namespace:NCLVaultGUIClient.ViewModels"
         mc:Ignorable="d"
        Title="Home" Height="450" Width="800">
     <Window.DataContext>
@@ -13,6 +16,12 @@
     </Window.DataContext>
     <Window.Resources>
         <system:String x:Key="strGroup">Group</system:String>
+        <system:String x:Key="strName">Name</system:String>
+        <system:String x:Key="strExpired">Expired</system:String>
+        <system:String x:Key="strUsername">Username</system:String>
+        <system:String x:Key="strPassword">Password</system:String>
+        <system:String x:Key="strUrl">Url</system:String>
+        <system:String x:Key="strNotes">Notes</system:String>
     </Window.Resources>
 
     <Window.Style>
@@ -30,26 +39,75 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <StackPanel  Orientation="Vertical" Grid.Column="0" Grid.Row="0" Margin="5,0,5,0">
-            <Label Content="Group"/>
+            <Label Content="{StaticResource strGroup}"/>
             <TextBox x:Name="uiTxtGroup" Text="{Binding PasswordEntryCreateDto.Group}"/>
-            <Label Content="Name"/>
+            <Label Content="{StaticResource strName}"/>
             <TextBox x:Name="uitxtName" Text="{Binding PasswordEntryCreateDto.Name}"/>
-            <Label Content="Expired"/>
+            <Label Content="{StaticResource strExpired}"/>
             <DatePicker x:Name="uiDpExpired" Text="{Binding PasswordEntryCreateDto.Expired}" />
-            <Label Content="Username"/>
+            <Label Content="{StaticResource strUsername}"/>
             <TextBox x:Name="uiTxtName" Text="{Binding PasswordEntryCreateDto.Username}"/>
-            <Label Content="Password"/>
-            <PasswordBox x:Name="uiPbPassword" PasswordChanged="uiPbPassword_PasswordChanged"/>
-            <Label Content="Url"/>
+            <Label Content="{StaticResource strPassword}"/>
+            <Grid>
+                <Grid.Resources>
+                    <ImageBrush x:Key="AddButtonImageBrush" ImageSource="/images/ic_key32.png" Stretch="Uniform"/>
+                </Grid.Resources>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <PasswordBox Grid.Column="0" x:Name="uiPbPassword" PasswordChanged="uiPbPassword_PasswordChanged"/>
+                    <Button Grid.Column="1" Background="{StaticResource AddButtonImageBrush}" Tag="{Binding PasswordEntryCreateDto.Password}" Click="Button_Click"></Button>
+            </Grid>
+            <Label Content="{StaticResource strUrl}"/>
             <TextBox x:Name="uiTxtUrl" Text="{Binding PasswordEntryCreateDto.Url}"/>
-            <Label Content="Notes"/>
+            <Label Content="{StaticResource strNotes}"/>
             <TextBox TextWrapping="Wrap" Height="40" AcceptsReturn="True" x:Name="uiTxtNotes" Text="{Binding PasswordEntryCreateDto.Notes}"/>
-            <Button Margin="0,15,0,0" Command="{Binding Path=CreatePasswordCommand}" CommandParameter="{Binding Path=PasswordEntryCreateDto}">Add</Button>
+            <Grid Margin="0,15,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Button Grid.Column="0" Grid.Row="0" Command="{Binding Path=CreatePasswordCommand}" CommandParameter="{Binding Path=PasswordEntryCreateDto}">Add</Button>
+                <Button Grid.Column="1" Grid.Row="0">Update</Button>
+                <Button Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2">Remove</Button>
+            </Grid>
         </StackPanel>
         <StackPanel Orientation="Vertical" Grid.Column="1" Grid.Row="0">
-            <Button>Get Passwords</Button>
-            <TreeView x:Name="uiTwPassword" ItemsSource="{Binding PasswordList}"/>
+            <Grid Margin="2,2,2,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBox x:Name="uiTxtSearchName" Grid.Column="0"></TextBox>
+                <Button Grid.Column="1">Search</Button>
+                <Button Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Command="{Binding ShowPasswordCommand}">Get Passwords</Button>
+            </Grid>
+            <TreeView x:Name="uiTwPassword" ItemsSource="{Binding GroupsPassword}" SelectedItemChanged="uiTwPassword_SelectedItemChanged">
+                <TreeView.Resources>
+                    <HierarchicalDataTemplate DataType="{x:Type models:PasswordGroup}" ItemsSource="{Binding Passwords}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="/images/ic_folder32.png"/>
+                            <TextBlock Text="{Binding GroupName}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </HierarchicalDataTemplate>
+                    <DataTemplate DataType="{x:Type vfmodels:PasswordEntryReadDto}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="/images/ic_key32.png" Width="16" Height="16"/>
+                            <TextBlock Text="{Binding Name}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </TreeView.Resources>
+            </TreeView>
         </StackPanel>
-
     </Grid>
 </Window>
