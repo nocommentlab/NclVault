@@ -28,12 +28,8 @@ namespace NclVaultCLIClient
 
         static void Main(string[] args)
         {
+            
             backendInterface = new BackendInterface();
-            if(File.Exists("init_id.key"))
-            {
-                //STRING_InitIdKey = Encoding.UTF8.GetString((ProtectDataManager.Unprotect(Convert.FromBase64String(File.ReadAllText("init_id.key")))));
-                //Console.Write($"qui:{STRING_InitIdKey}");
-            }
 
             Utils.PrintBanner();
 
@@ -64,7 +60,7 @@ namespace NclVaultCLIClient
                         ManagerReadPasswords();
                         break;
                     case "/createpassword":
-                    case "cp":
+                    case "/cp":
                         ManageCreatePassword();
                         break;
                     case "/help":

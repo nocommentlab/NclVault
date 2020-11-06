@@ -19,9 +19,9 @@ namespace NclVaultCLIClient.Controllers
         #region Costants
         private const string INIT_API_ENDPOINT_URL = "https://localhost:5001/vault/initvault";
         private const string LOGIN_API_ENDPOINT_URL = "https://localhost:5001/token/login";
-        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/read/password/{0}";
-        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://localhost:5001/vault/read/password";
-        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/create/password";
+        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password/{0}";
+        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
+        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
 
         #endregion
         #region Members

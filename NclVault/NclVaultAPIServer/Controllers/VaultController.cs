@@ -116,7 +116,7 @@ namespace NclVaultAPIServer.Controllers
 
         //POST /create/password
         [HttpPost]
-        [Route("create/password")]
+        [Route("password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public IActionResult CreatePassword([FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
         {
@@ -147,7 +147,7 @@ namespace NclVaultAPIServer.Controllers
 
         //PUT /update/password/{id}
         [HttpPut]
-        [Route("update/password/{id}")]
+        [Route("password/{id}")]
         public IActionResult UpdatePassword(int id, [FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
         {
             if (!ModelState.IsValid)
@@ -181,7 +181,7 @@ namespace NclVaultAPIServer.Controllers
         }
 
         [HttpDelete]
-        [Route("delete/password/{id}")]
+        [Route("password/{id}")]
         public IActionResult DeletePassword(int id)
         {
             if (!ModelState.IsValid)
@@ -222,7 +222,7 @@ namespace NclVaultAPIServer.Controllers
 
         //GET read/password/{id}
         [HttpGet]
-        [Route("read/password/{id}")]
+        [Route("password/{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public ActionResult<PasswordEntryReadDto> DecryptedReadPasswordById(int id)
         {
@@ -256,7 +256,7 @@ namespace NclVaultAPIServer.Controllers
 
         //GET read/password
         [HttpGet]
-        [Route("read/password")]
+        [Route("password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public ActionResult<List<PasswordEntryReadDto>> DecryptedReadPassword()
         {
