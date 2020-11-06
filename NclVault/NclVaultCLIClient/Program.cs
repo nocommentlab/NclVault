@@ -22,21 +22,18 @@ namespace NclVaultCLIClient
         private const string PROMPT = "ncl-vault> ";
         private static bool BOOL_RequestExit = false;
         private static string STRING_LastCommand = String.Empty;
-        private static string STRING_InitIdKey;
-
         private static BackendInterface backendInterface;
 
         static void Main(string[] args)
         {
-            
+            ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler();
             backendInterface = new BackendInterface();
-
+            
             Utils.PrintBanner();
 
             while (!BOOL_RequestExit)
             {
-                Console.Write(PROMPT);
-                STRING_LastCommand = Console.ReadLine();
+                STRING_LastCommand = ReadLine.Read(PROMPT) ;
                 switch (STRING_LastCommand)
                 {
                     case "/exit":
@@ -150,7 +147,7 @@ namespace NclVaultCLIClient
             HTTPResponseResult httpResponseResult = null;
 
             Console.Write($"{PROMPT}login/username:"); STRING_Username = Console.ReadLine();
-            Console.Write($"{PROMPT}login/password:"); STRING_Password = Console.ReadLine();
+            Console.Write($"{PROMPT}login/password:"); STRING_Password = ReadLine.ReadPassword();
 
             if (STRING_Username.Length > 0 && STRING_Password.Length > 0)
             {

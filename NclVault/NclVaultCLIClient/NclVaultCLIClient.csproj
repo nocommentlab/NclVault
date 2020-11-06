@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="ConsoleTables" Version="2.4.2" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="ReadLine" Version="2.0.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="4.7.0" />
   </ItemGroup>
 
