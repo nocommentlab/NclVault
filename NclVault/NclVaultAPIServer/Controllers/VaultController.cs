@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Security.Claims;
@@ -164,7 +165,7 @@ namespace NclVaultAPIServer.Controllers
 
             // Extract the password entry with the requested ID
             PasswordEntry passwordEntry = _vaultDbContext.Passwords.FirstOrDefault(element => element.Id == id);
-            if(null == passwordEntry)
+            if (null == passwordEntry)
             {
                 return NotFound();
             }
@@ -175,7 +176,7 @@ namespace NclVaultAPIServer.Controllers
             _mapper.Map(passwordEntryCreateDto, passwordEntry);
             _vaultDbContext.SaveChanges();
 
-            
+
             return CreatedAtAction(nameof(ReadPasswordById), new { ID = passwordEntry.Id }, passwordEntry);
         }
 
@@ -216,7 +217,7 @@ namespace NclVaultAPIServer.Controllers
 
 
             // Returns the mapped PasswordEntry
-            return  _mapper.Map<PasswordEntryReadDto>(passwordEntry);
+            return _mapper.Map<PasswordEntryReadDto>(passwordEntry);
         }
 
         //GET read/password/{id}
@@ -288,6 +289,64 @@ namespace NclVaultAPIServer.Controllers
             return Ok(_mapper.Map<List<PasswordEntryReadDto>>(_vaultDbContext.Passwords));
         }
 
+        //https://stackoverflow.com/questions/16015548/tool-for-sending-multipart-form-data-request
+        //https://www.c-sharpcorner.com/article/upload-download-files-in-asp-net-core-2-0/
+        [HttpPost]
+        [Route("files/")]
+        public async Task<IActionResult> UploadFile(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return Content("file not selected");
 
+            using (var stream = new FileStream(file.FileName, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            return RedirectToAction("Files");
+        }
+
+        [HttpGet]
+        [Route("files/{filename}")]
+        public async Task<IActionResult> Download(string filename)
+        {
+            if (filename == null)
+                return Content("filename not present");
+
+
+            var memory = new MemoryStream();
+            using (var stream = new FileStream(filename, FileMode.Open))
+            {
+                await stream.CopyToAsync(memory);
+            }
+            memory.Position = 0;
+            return File(memory, GetContentType(filename), Path.GetFileName(filename));
+        }
+
+
+        private string GetContentType(string path)
+        {
+            var types = GetMimeTypes();
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return types[ext];
+        }
+
+        private Dictionary<string, string> GetMimeTypes()
+        {
+            return new Dictionary<string, string>
+            {
+                {".txt", "text/plain"},
+                {".pdf", "application/pdf"},
+                {".doc", "application/vnd.ms-word"},
+                {".docx", "application/vnd.ms-word"},
+                {".xls", "application/vnd.ms-excel"},  
+                {".png", "image/png"},
+                {".jpg", "image/jpeg"},
+                {".jpeg", "image/jpeg"},
+                {".gif", "image/gif"},
+                {".csv", "text/csv"},
+                {".zip", "application/zip"}
+            };
+        }
     }
 }
