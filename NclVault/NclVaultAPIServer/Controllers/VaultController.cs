@@ -295,15 +295,37 @@ namespace NclVaultAPIServer.Controllers
         [Route("files/")]
         public async Task<IActionResult> UploadFile(IFormFile file)
         {
-            if (file == null || file.Length == 0)
-                return Content("file not selected");
+            byte[] vBYTE_EncryptedPayload;
 
-            using (var stream = new FileStream(file.FileName, FileMode.Create))
+            // Checks if the received file is null or empty
+            if (file == null || file.Length == 0)
+                return BadRequest();
+
+            // Extract the Credential element that has the same username received
+            /*Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+
+            if (null == selectedCredential)
             {
-                await file.CopyToAsync(stream);
+                return Unauthorized();
+            }*/
+
+            /* Encrypts the content */
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                await file.CopyToAsync(memoryStream);
+
+                vBYTE_EncryptedPayload = CryptoHelper.EncryptByteStream(memoryStream.GetBuffer(), Request.Headers["InitId"]);
+
             }
 
-            return RedirectToAction("Files");
+            /* Writes the encrypted buffer to file */
+            using (var stream = new FileStream(file.FileName + ".enc", FileMode.Create))
+            {
+                await stream.WriteAsync(vBYTE_EncryptedPayload);
+            }
+
+
+            return Ok();
         }
 
         [HttpGet]
@@ -313,14 +335,21 @@ namespace NclVaultAPIServer.Controllers
             if (filename == null)
                 return Content("filename not present");
 
+            var encryptedPayload = new MemoryStream();
+            using (var stream = new FileStream(filename, FileMode.Open))
+            {
+                await stream.CopyToAsync(encryptedPayload);
+            }
 
-            var memory = new MemoryStream();
+            byte[] decryptedPayload = CryptoHelper.DecryptByteStream(encryptedPayload.ToArray(), Request.Headers["InitId"]);
+
+            /*var memory = new MemoryStream();
             using (var stream = new FileStream(filename, FileMode.Open))
             {
                 await stream.CopyToAsync(memory);
             }
-            memory.Position = 0;
-            return File(memory, GetContentType(filename), Path.GetFileName(filename));
+            memory.Position = 0;*/
+            return File(decryptedPayload, "image/jpeg"/*GetContentType(filename)*/, "decrypted.jpg");
         }
 
 
@@ -339,7 +368,7 @@ namespace NclVaultAPIServer.Controllers
                 {".pdf", "application/pdf"},
                 {".doc", "application/vnd.ms-word"},
                 {".docx", "application/vnd.ms-word"},
-                {".xls", "application/vnd.ms-excel"},  
+                {".xls", "application/vnd.ms-excel"},
                 {".png", "image/png"},
                 {".jpg", "image/jpeg"},
                 {".jpeg", "image/jpeg"},

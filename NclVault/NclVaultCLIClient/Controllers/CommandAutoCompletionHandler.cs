@@ -6,7 +6,7 @@ namespace NclVaultCLIClient.Controllers
 {
     class CommandAutoCompletionHandler : IAutoCompleteHandler
     {
-        // characters to start completion from
+        
         public char[] Separators { get; set; } = new char[] { '/' };
 
 
