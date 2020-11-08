@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -18,6 +19,7 @@ using NclVaultAPIServer.DTOs.CredentialDTO;
 using NclVaultAPIServer.DTOs.PasswordEntryDTO;
 using NclVaultAPIServer.Models;
 using NclVaultAPIServer.Utils;
+using NETCore.Encrypt;
 
 namespace NclVaultAPIServer.Controllers
 {
@@ -134,7 +136,8 @@ namespace NclVaultAPIServer.Controllers
             }
 
             /* Sets the encrypted password using the InitId request header parameter as key*/
-            passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            //passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            passwordEntryCreateDto.Password = EncryptProvider.AESEncrypt(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
             PasswordEntry passwordEntry = _mapper.Map<PasswordEntry>(passwordEntryCreateDto);
 
             // Adds the entry password to EF and writes to the databae
@@ -171,7 +174,8 @@ namespace NclVaultAPIServer.Controllers
             }
 
             /* Sets the encrypted password using the InitId request header parameter as key*/
-            passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            //passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            passwordEntryCreateDto.Password = EncryptProvider.AESEncrypt(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
 
             _mapper.Map(passwordEntryCreateDto, passwordEntry);
             _vaultDbContext.SaveChanges();
@@ -248,7 +252,7 @@ namespace NclVaultAPIServer.Controllers
             }
 
             // Decrypts the password using the InitId request header parameter as key
-            passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
+            passwordEntry.Password = EncryptProvider.AESDecrypt(passwordEntry.Password, Request.Headers["InitId"]);
 
             // Returns the PasswordEntry object
             return Ok(_mapper.Map<PasswordEntryReadDto>(passwordEntry));
@@ -282,7 +286,7 @@ namespace NclVaultAPIServer.Controllers
             foreach (PasswordEntry passwordEntry in _vaultDbContext.Passwords)
             {
                 // Decrypts the password using the InitId request header parameter as key
-                passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
+                passwordEntry.Password = EncryptProvider.AESDecrypt(passwordEntry.Password, Request.Headers["InitId"]);
             }
 
             // Returns the Mapped List<PasswordEntry> objects
@@ -314,7 +318,7 @@ namespace NclVaultAPIServer.Controllers
             {
                 await file.CopyToAsync(memoryStream);
 
-                vBYTE_EncryptedPayload = CryptoHelper.EncryptByteStream(memoryStream.GetBuffer(), Request.Headers["InitId"]);
+                vBYTE_EncryptedPayload = EncryptProvider.AESEncrypt(memoryStream.GetBuffer(), Request.Headers["InitId"]);
 
             }
 
@@ -332,8 +336,8 @@ namespace NclVaultAPIServer.Controllers
         [Route("files/{filename}")]
         public async Task<IActionResult> Download(string filename)
         {
-            if (filename == null)
-                return Content("filename not present");
+            if (filename == null || Request.Headers["InitId"].Count == 0)
+                return BadRequest();
 
             var encryptedPayload = new MemoryStream();
             using (var stream = new FileStream(filename, FileMode.Open))
@@ -341,15 +345,15 @@ namespace NclVaultAPIServer.Controllers
                 await stream.CopyToAsync(encryptedPayload);
             }
 
-            byte[] decryptedPayload = CryptoHelper.DecryptByteStream(encryptedPayload.ToArray(), Request.Headers["InitId"]);
+            byte[] decryptedPayload = EncryptProvider.AESDecrypt(encryptedPayload.ToArray(), Request.Headers["InitId"]);
 
-            /*var memory = new MemoryStream();
+            var memory = new MemoryStream();
             using (var stream = new FileStream(filename, FileMode.Open))
             {
                 await stream.CopyToAsync(memory);
             }
-            memory.Position = 0;*/
-            return File(decryptedPayload, "image/jpeg"/*GetContentType(filename)*/, "decrypted.jpg");
+            memory.Position = 0;
+            return File(decryptedPayload, "image/jpeg", "decrypted.jpg");
         }
 
 

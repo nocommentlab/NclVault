@@ -31,5 +31,11 @@
     <Folder Include="Migrations\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="NETCore.Encrypt">
+      <HintPath>libs\NETCore.Encrypt.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 
 </Project>
