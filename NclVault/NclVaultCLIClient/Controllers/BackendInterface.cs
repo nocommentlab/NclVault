@@ -80,10 +80,6 @@ namespace NclVaultCLIClient.Controllers
         public async Task<HTTPResponseResult> ReadPassword(int INT32_Id)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
-
-
-            
-
             
             HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync(String.Format(READ_PASSWORD_API_ENDPOINT_URL, INT32_Id));
 
@@ -134,8 +130,9 @@ namespace NclVaultCLIClient.Controllers
 
             httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
             httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+            
             httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
-
+            
             if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {
                 httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
