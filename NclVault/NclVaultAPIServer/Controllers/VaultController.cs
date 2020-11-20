@@ -116,7 +116,7 @@ namespace NclVaultAPIServer.Controllers
         }
 
 
-        //POST /create/password
+        //POST /password
         [HttpPost]
         [Route("password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]

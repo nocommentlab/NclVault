@@ -17,9 +17,9 @@ namespace NclVaultFramework.Controllers
         #region Costants
         private const string INIT_API_ENDPOINT_URL = "https://localhost:5001/vault/initvault";
         private const string LOGIN_API_ENDPOINT_URL = "https://localhost:5001/token/login";
-        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/read/password/{0}";
-        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://localhost:5001/vault/read/password";
-        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/create/password";
+        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password/{0}";
+        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
+        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
 
         #endregion
         #region Members
@@ -146,10 +146,6 @@ namespace NclVaultFramework.Controllers
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
 
-
-
-
-
             HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync(String.Format(READ_PASSWORD_API_ENDPOINT_URL, INT32_Id));
 
             httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
@@ -199,9 +195,11 @@ namespace NclVaultFramework.Controllers
 
             httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
             httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
-            httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
+            string responseContent = await httpResponseMessage.Content.ReadAsStringAsync();
+            httpResponseResult.OBJECT_RestResult = JsonConvert.DeserializeObject<PasswordEntryReadDto>(responseContent);
+            //httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
 
-            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+            if (httpResponseMessage.StatusCode == HttpStatusCode.Created)
             {
                 httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
