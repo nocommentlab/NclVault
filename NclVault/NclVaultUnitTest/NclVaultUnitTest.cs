@@ -18,7 +18,7 @@ namespace NclVaultUnitTest
     public class NclVaultUnitTest
     {
         #region Costants
-        private const int CRED_NUMBER_STRESS_TEST = 1000;
+        private const int CRED_NUMBER_STRESS_TEST = 100;
 
         #endregion
         #region Members
@@ -57,7 +57,7 @@ namespace NclVaultUnitTest
                 Password = "P@55w0rd"
             };
 
-            _backendInterface = BackendInterface.GetInstance();
+            _backendInterface = BackendInterface.GetInstance(true);
         }
 
         [TestMethod]
@@ -89,7 +89,7 @@ namespace NclVaultUnitTest
         [Description("Test the login process")]
         public void T1_003_DoLogin()
         {
-            _backendInterface = BackendInterface.GetInstance();
+            _backendInterface = BackendInterface.GetInstance(true);
             HTTPResponseResult httpReponseResult = _backendInterface.Login(_initCredential, _STRING_InitId).GetAwaiter().GetResult();
 
             Assert.AreEqual(httpReponseResult.StatusCode, HttpStatusCode.OK);
@@ -149,7 +149,7 @@ namespace NclVaultUnitTest
         [Description("Test the login process")]
         public void T2_002_DoLogin()
         {
-            _backendInterface = BackendInterface.GetInstance();
+            _backendInterface = BackendInterface.GetInstance(true);
             HTTPResponseResult httpReponseResult = _backendInterface.Login(_initCredential, _STRING_InitId).GetAwaiter().GetResult();
 
             Assert.AreEqual(httpReponseResult.StatusCode, HttpStatusCode.OK);

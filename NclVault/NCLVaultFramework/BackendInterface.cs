@@ -15,11 +15,11 @@ namespace NclVaultFramework.Controllers
     {
 
         #region Costants
-        private const string INIT_API_ENDPOINT_URL = "https://localhost:5001/vault/initvault";
-        private const string LOGIN_API_ENDPOINT_URL = "https://localhost:5001/token/login";
-        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password/{0}";
-        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
-        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
+        private const string INIT_API_ENDPOINT_URL = "https://192.168.1.216/vault/initvault";
+        private const string LOGIN_API_ENDPOINT_URL = "https://192.168.1.216/token/login";
+        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://192.168.1.216/vault/password/{0}";
+        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://192.168.1.216/vault/password";
+        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://192.168.1.216/vault/password";
 
         #endregion
         #region Members
@@ -28,16 +28,26 @@ namespace NclVaultFramework.Controllers
         #endregion
 
 
-        public BackendInterface()
+        public BackendInterface(bool sslVerificationBypass)
         {
-            _httpClient = new HttpClient();
+            if (sslVerificationBypass)
+            {
+                HttpClientHandler clientHandler = new HttpClientHandler();
+                clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
+
+                _httpClient = new HttpClient(clientHandler);
+            }
+            else
+            {
+                _httpClient = new HttpClient();
+            }
         }
 
-        public static BackendInterface GetInstance()
+        public static BackendInterface GetInstance(bool sslVerificationBypass)
         {
             if (null == _backendInterface)
             {
-                _backendInterface = new BackendInterface();
+                _backendInterface = new BackendInterface(sslVerificationBypass);
             }
 
             return _backendInterface;
@@ -83,7 +93,7 @@ namespace NclVaultFramework.Controllers
             return httpResponseResult;
 
         }
-        
+
         [Obsolete("UNSECURE Method. Use the Login(NetworkCredential, String) implementation")]
         public async Task<HTTPResponseResult> Login(object body, string STRING_InitIdKey)
         {

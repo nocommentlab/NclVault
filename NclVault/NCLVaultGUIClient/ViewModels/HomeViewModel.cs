@@ -47,7 +47,7 @@ namespace NCLVaultGUIClient.ViewModels
 
         public HomeViewModel()
         {
-            _backendInterface = BackendInterface.GetInstance();
+            _backendInterface = BackendInterface.GetInstance(true);
 
             CreatePasswordCommand = new DoCreatePasswordCommand(this);
             ShowPasswordCommand = new DoShowPasswordCommand(this);

@@ -38,7 +38,7 @@ namespace NCLVaultGUIClient.ViewModels
             /* Declares the command to do the login */
             LoginCommand = new DoLoginCommand(this);
 
-            _backendInterface = BackendInterface.GetInstance();
+            _backendInterface = BackendInterface.GetInstance(true);
                         
         }
 

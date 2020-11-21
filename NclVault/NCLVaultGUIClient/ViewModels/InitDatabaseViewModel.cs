@@ -40,7 +40,7 @@ namespace NCLVaultGUIClient.ViewModels
         {
             InitCredential = new Credential();
             InitCommand = new DoInitCommand(this);
-            _backendInterface = BackendInterface.GetInstance();
+            _backendInterface = BackendInterface.GetInstance(true);
 
             _STRING_InitId = "-";
 

@@ -1,12 +1,12 @@
 ﻿# Generates a pfx certificate on the build machine
 # dotnet dev-certs https -ep [Path of the certificate]-p [Password]
-# docker run -p 80:80 -p 443:443 -e Kestrel__Certificates__Default__Path=/app/Infrastructure/Certificate/cert.pfx -e Kestrel__Certificates__Default__Password=mypassword -e "ASPNETCORE_URLS=https://+;http://+" -v <path that contains the certificate>:/app/Infrastructure/Certificate ncl/vault
+# docker run -p 80:80 -p 443:443 -e Kestrel__Certificates__Default__Path=/app/Infrastructure/Certificate/cert.pfx -e Kestrel__Certificates__Default__Password=[Password] -e "ASPNETCORE_URLS=https://+;http://+" -v <path that contains the certificate>:/app/Infrastructure/Certificate ncl/vault
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
 
 EXPOSE 80
 EXPOSE 443
 
-COPY NclVaultAPIServer/bin/Release/netcoreapp3.1 /app
+COPY ./ubuntu.18.04-x64 /app
 WORKDIR /app
+ENTRYPOINT ["dotnet", "NclVaultAPIServer.dll"]
 
-ENTRYPOINT ["./NclVaultAPIServer"] 
