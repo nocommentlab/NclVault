@@ -19,9 +19,9 @@ namespace NclVaultCLIClient.Controllers
         #region Costants
         private const string INIT_API_ENDPOINT_URL = "https://localhost:5001/vault/initvault";
         private const string LOGIN_API_ENDPOINT_URL = "https://localhost:5001/token/login";
-        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/read/password/{0}";
-        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://localhost:5001/vault/read/password";
-        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/create/password";
+        private const string READ_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password/{0}";
+        private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
+        private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://localhost:5001/vault/password";
 
         #endregion
         #region Members
@@ -80,10 +80,6 @@ namespace NclVaultCLIClient.Controllers
         public async Task<HTTPResponseResult> ReadPassword(int INT32_Id)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
-
-
-            
-
             
             HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync(String.Format(READ_PASSWORD_API_ENDPOINT_URL, INT32_Id));
 
@@ -134,8 +130,9 @@ namespace NclVaultCLIClient.Controllers
 
             httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
             httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+            
             httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
-
+            
             if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {
                 httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();

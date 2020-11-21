@@ -87,7 +87,11 @@ namespace NclVaultAPIServer
                 endpoints.MapControllers();
             });
 
-
+            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+            {
+                var context = serviceScope.ServiceProvider.GetRequiredService<VaultDbContext>();
+                context.Database.EnsureCreated();
+            }
         }
     }
 }

@@ -5,7 +5,13 @@ VisualStudioVersion = 16.0.30406.217
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NclVaultAPIServer", "NclVaultAPIServer\NclVaultAPIServer.csproj", "{B4976C90-8D70-4E04-ADDE-224BA0745412}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NclVaultCLIClient", "NclVaultCLIClient\NclVaultCLIClient.csproj", "{33E6F779-DC96-486F-B0DB-EA7E9AB5227F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NclVaultCLIClient", "NclVaultCLIClient\NclVaultCLIClient.csproj", "{33E6F779-DC96-486F-B0DB-EA7E9AB5227F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NCLVaultGUIClient", "NCLVaultGUIClient\NCLVaultGUIClient.csproj", "{5DCED04A-6EC8-4700-A549-CA1788FA75CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NCLVaultFramework", "NCLVaultFramework\NCLVaultFramework.csproj", "{7F7EF141-26EF-46DD-8B57-173771A0FEE1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NclVaultUnitTest", "NclVaultUnitTest\NclVaultUnitTest.csproj", "{E9F03E72-E125-4B70-A281-AF9EDAD4B257}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +27,18 @@ Global
 		{33E6F779-DC96-486F-B0DB-EA7E9AB5227F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{33E6F779-DC96-486F-B0DB-EA7E9AB5227F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{33E6F779-DC96-486F-B0DB-EA7E9AB5227F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5DCED04A-6EC8-4700-A549-CA1788FA75CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DCED04A-6EC8-4700-A549-CA1788FA75CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DCED04A-6EC8-4700-A549-CA1788FA75CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DCED04A-6EC8-4700-A549-CA1788FA75CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F7EF141-26EF-46DD-8B57-173771A0FEE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9F03E72-E125-4B70-A281-AF9EDAD4B257}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9F03E72-E125-4B70-A281-AF9EDAD4B257}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9F03E72-E125-4B70-A281-AF9EDAD4B257}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9F03E72-E125-4B70-A281-AF9EDAD4B257}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

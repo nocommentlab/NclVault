@@ -28,7 +28,9 @@ namespace NclVaultAPIServer.Data
             _configuration = configuration;
 
             /* Gets the database filename from the configuration file */
-            _STRING_DatabaseName = _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_VAULT_FILENAME").ToString();// dbConnProperties.STRING_Filename;
+            _STRING_DatabaseName = _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_VAULT_FILENAME").ToString();
+            
+
         }
 
         public VaultDbContext(SqliteConnection sqliteConnection)
@@ -40,8 +42,11 @@ namespace NclVaultAPIServer.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
+            
             _sqliteConnection ??= InitializeSQLiteConnection(_STRING_DatabaseName, _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_ENCRYPTION_KEY").ToString());
+            
             options.UseSqlite(_sqliteConnection);
+            
         }
 
         private static SqliteConnection InitializeSQLiteConnection(string databaseFile, string STRING_EncryptionKey)

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,6 +19,7 @@ using NclVaultAPIServer.DTOs.CredentialDTO;
 using NclVaultAPIServer.DTOs.PasswordEntryDTO;
 using NclVaultAPIServer.Models;
 using NclVaultAPIServer.Utils;
+using NETCore.Encrypt;
 
 namespace NclVaultAPIServer.Controllers
 {
@@ -113,9 +116,9 @@ namespace NclVaultAPIServer.Controllers
         }
 
 
-        //POST /create/password
+        //POST /password
         [HttpPost]
-        [Route("create/password")]
+        [Route("password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public IActionResult CreatePassword([FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
         {
@@ -133,7 +136,8 @@ namespace NclVaultAPIServer.Controllers
             }
 
             /* Sets the encrypted password using the InitId request header parameter as key*/
-            passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            //passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            passwordEntryCreateDto.Password = EncryptProvider.AESEncrypt(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
             PasswordEntry passwordEntry = _mapper.Map<PasswordEntry>(passwordEntryCreateDto);
 
             // Adds the entry password to EF and writes to the databae
@@ -146,7 +150,7 @@ namespace NclVaultAPIServer.Controllers
 
         //PUT /update/password/{id}
         [HttpPut]
-        [Route("update/password/{id}")]
+        [Route("password/{id}")]
         public IActionResult UpdatePassword(int id, [FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
         {
             if (!ModelState.IsValid)
@@ -164,23 +168,24 @@ namespace NclVaultAPIServer.Controllers
 
             // Extract the password entry with the requested ID
             PasswordEntry passwordEntry = _vaultDbContext.Passwords.FirstOrDefault(element => element.Id == id);
-            if(null == passwordEntry)
+            if (null == passwordEntry)
             {
                 return NotFound();
             }
 
             /* Sets the encrypted password using the InitId request header parameter as key*/
-            passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            //passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            passwordEntryCreateDto.Password = EncryptProvider.AESEncrypt(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
 
             _mapper.Map(passwordEntryCreateDto, passwordEntry);
             _vaultDbContext.SaveChanges();
 
-            
+
             return CreatedAtAction(nameof(ReadPasswordById), new { ID = passwordEntry.Id }, passwordEntry);
         }
 
         [HttpDelete]
-        [Route("delete/password/{id}")]
+        [Route("password/{id}")]
         public IActionResult DeletePassword(int id)
         {
             if (!ModelState.IsValid)
@@ -216,12 +221,12 @@ namespace NclVaultAPIServer.Controllers
 
 
             // Returns the mapped PasswordEntry
-            return  _mapper.Map<PasswordEntryReadDto>(passwordEntry);
+            return _mapper.Map<PasswordEntryReadDto>(passwordEntry);
         }
 
         //GET read/password/{id}
         [HttpGet]
-        [Route("read/password/{id}")]
+        [Route("password/{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public ActionResult<PasswordEntryReadDto> DecryptedReadPasswordById(int id)
         {
@@ -247,7 +252,7 @@ namespace NclVaultAPIServer.Controllers
             }
 
             // Decrypts the password using the InitId request header parameter as key
-            passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
+            passwordEntry.Password = EncryptProvider.AESDecrypt(passwordEntry.Password, Request.Headers["InitId"]);
 
             // Returns the PasswordEntry object
             return Ok(_mapper.Map<PasswordEntryReadDto>(passwordEntry));
@@ -255,7 +260,7 @@ namespace NclVaultAPIServer.Controllers
 
         //GET read/password
         [HttpGet]
-        [Route("read/password")]
+        [Route("password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public ActionResult<List<PasswordEntryReadDto>> DecryptedReadPassword()
         {
@@ -281,13 +286,100 @@ namespace NclVaultAPIServer.Controllers
             foreach (PasswordEntry passwordEntry in _vaultDbContext.Passwords)
             {
                 // Decrypts the password using the InitId request header parameter as key
-                passwordEntry.Password = Utils.CryptoHelper.DecryptString(passwordEntry.Password, Request.Headers["InitId"]);
+                passwordEntry.Password = EncryptProvider.AESDecrypt(passwordEntry.Password, Request.Headers["InitId"]);
             }
 
             // Returns the Mapped List<PasswordEntry> objects
             return Ok(_mapper.Map<List<PasswordEntryReadDto>>(_vaultDbContext.Passwords));
         }
 
+        //https://stackoverflow.com/questions/16015548/tool-for-sending-multipart-form-data-request
+        //https://www.c-sharpcorner.com/article/upload-download-files-in-asp-net-core-2-0/
+        [HttpPost]
+        [Route("files/")]
+        public async Task<IActionResult> UploadFile(IFormFile file)
+        {
+            byte[] vBYTE_EncryptedPayload;
 
+            // Checks if the received file is null or empty
+            if (file == null || file.Length == 0)
+                return BadRequest();
+
+            // Extract the Credential element that has the same username received
+            /*Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+
+            if (null == selectedCredential)
+            {
+                return Unauthorized();
+            }*/
+
+            /* Encrypts the content */
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                await file.CopyToAsync(memoryStream);
+
+                vBYTE_EncryptedPayload = EncryptProvider.AESEncrypt(memoryStream.GetBuffer(), Request.Headers["InitId"]);
+
+            }
+
+            /* Writes the encrypted buffer to file */
+            using (var stream = new FileStream(file.FileName + ".enc", FileMode.Create))
+            {
+                await stream.WriteAsync(vBYTE_EncryptedPayload);
+            }
+
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("files/{filename}")]
+        public async Task<IActionResult> Download(string filename)
+        {
+            if (filename == null || Request.Headers["InitId"].Count == 0)
+                return BadRequest();
+
+            var encryptedPayload = new MemoryStream();
+            using (var stream = new FileStream(filename, FileMode.Open))
+            {
+                await stream.CopyToAsync(encryptedPayload);
+            }
+
+            byte[] decryptedPayload = EncryptProvider.AESDecrypt(encryptedPayload.ToArray(), Request.Headers["InitId"]);
+
+            var memory = new MemoryStream();
+            using (var stream = new FileStream(filename, FileMode.Open))
+            {
+                await stream.CopyToAsync(memory);
+            }
+            memory.Position = 0;
+            return File(decryptedPayload, "image/jpeg", "decrypted.jpg");
+        }
+
+
+        private string GetContentType(string path)
+        {
+            var types = GetMimeTypes();
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return types[ext];
+        }
+
+        private Dictionary<string, string> GetMimeTypes()
+        {
+            return new Dictionary<string, string>
+            {
+                {".txt", "text/plain"},
+                {".pdf", "application/pdf"},
+                {".doc", "application/vnd.ms-word"},
+                {".docx", "application/vnd.ms-word"},
+                {".xls", "application/vnd.ms-excel"},
+                {".png", "image/png"},
+                {".jpg", "image/jpeg"},
+                {".jpeg", "image/jpeg"},
+                {".gif", "image/gif"},
+                {".csv", "text/csv"},
+                {".zip", "application/zip"}
+            };
+        }
     }
 }

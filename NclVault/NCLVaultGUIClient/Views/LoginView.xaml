@@ -1,0 +1,77 @@
+﻿<Window x:Class="NCLVaultGUIClient.Views.Login"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:NCLVaultGUIClient"
+        xmlns:mv="clr-namespace:NCLVaultGUIClient.ViewModels"
+        xmlns:system="clr-namespace:System;assembly=mscorlib"
+        xmlns:cv="clr-namespace:NCLVaultGUIClient.Converters"
+        mc:Ignorable="d"
+        Title="Login" Height="500" Width="300">
+    <!-- DataContext Declaration -->
+    <Window.DataContext>
+        <mv:LoginViewModel/>
+    </Window.DataContext>
+    <!-- Window Resources Declaration -->
+    <Window.Resources>
+        <system:String x:Key="strWelcomeMessage">Welcome to NCLVault</system:String>
+        <system:String x:Key="strUsername">Username</system:String>
+        <system:String x:Key="strPassword">Password</system:String>
+        <system:String x:Key="strInit">init database</system:String>
+        <system:String x:Key="strLogoCaption">Please sign in the below or</system:String>
+        <!-- Declares the visibility converter used with the Window.Visibility property -->
+        <cv:VisibilityConverter x:Key="VisibilityConverter"/>
+        
+        <!-- Declare Explicit Style -->
+        <Style x:Key="WelcomeMessageStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+
+        <Style x:Key="HeaderLabelStyle" TargetType="Label">
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style  TargetType="TextBox">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="PasswordBox">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+    <!-- Window Visibility Property Binding Declaration.
+         Sets this property otherwise will gets an exception
+    -->
+    <Window.Visibility>
+        <Binding Mode="TwoWay" Path="IsWindowVisible" Converter="{StaticResource VisibilityConverter}"/>
+    </Window.Visibility>
+    <Window.Style>
+        <Style TargetType="Control">
+            <Setter Property="FontFamily" Value="Verdana"/>
+        </Style>
+    </Window.Style>
+    <!-- UI -->
+    <Grid>
+        <StackPanel Orientation="Vertical" Margin="10,15,10,0">
+            <Image Source="/images/logo.png" Margin="40,0,40,5"/>
+            <TextBlock Text="{StaticResource strWelcomeMessage}" Style="{StaticResource WelcomeMessageStyle}" HorizontalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock VerticalAlignment="Center" Text="{StaticResource strLogoCaption}" />
+                <Label  x:Name="uiLblInitDatabase" MouseDoubleClick="Label_MouseDoubleClick" >
+                    <Hyperlink  >
+                        <Label Content="{StaticResource strInit}"/>
+                    </Hyperlink>
+                </Label>
+            </StackPanel>
+            <Label Content="{StaticResource strUsername}" Style="{StaticResource HeaderLabelStyle}"/>
+            <TextBox x:Name="uiTxtUsername" Text="{Binding LoginCredential.UserName}"/>
+            <Label Content="{StaticResource strPassword}" Style="{StaticResource HeaderLabelStyle}"/>
+            <PasswordBox x:Name="uiTxtPassword" PasswordChanged="uiTxtPassword_PasswordChanged" />
+            <Button Margin="50,10,50,0" x:Name="uiBtnLogin" Content="LOGIN" Command="{Binding Path=LoginCommand}" CommandParameter="{Binding LoginCredential}"/>
+            
+        </StackPanel>
+    </Grid>
+</Window>

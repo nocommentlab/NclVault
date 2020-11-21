@@ -22,25 +22,18 @@ namespace NclVaultCLIClient
         private const string PROMPT = "ncl-vault> ";
         private static bool BOOL_RequestExit = false;
         private static string STRING_LastCommand = String.Empty;
-        private static string STRING_InitIdKey;
-
         private static BackendInterface backendInterface;
 
         static void Main(string[] args)
         {
+            ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler();
             backendInterface = new BackendInterface();
-            if(File.Exists("init_id.key"))
-            {
-                //STRING_InitIdKey = Encoding.UTF8.GetString((ProtectDataManager.Unprotect(Convert.FromBase64String(File.ReadAllText("init_id.key")))));
-                //Console.Write($"qui:{STRING_InitIdKey}");
-            }
 
             Utils.PrintBanner();
 
             while (!BOOL_RequestExit)
             {
-                Console.Write(PROMPT);
-                STRING_LastCommand = Console.ReadLine();
+                STRING_LastCommand = ReadLine.Read(PROMPT);
                 switch (STRING_LastCommand)
                 {
                     case "/exit":
@@ -64,12 +57,16 @@ namespace NclVaultCLIClient
                         ManagerReadPasswords();
                         break;
                     case "/createpassword":
-                    case "cp":
+                    case "/cp":
                         ManageCreatePassword();
                         break;
                     case "/help":
                     case "/h":
                         Utils.PrintHelp();
+                        break;
+                    case "/restore":
+                    case "/r":
+                        ManageRestore();
                         break;
                     default:
                         Console.WriteLine("[E] - Command not found");
@@ -126,52 +123,75 @@ namespace NclVaultCLIClient
         {
             string STRING_Username = String.Empty;
             string STRING_Password = String.Empty;
+            string STRING_PasswordRetype = String.Empty;
             HTTPResponseResult httpResponseResult = null;
 
             Console.Write($"{PROMPT}login/username:"); STRING_Username = Console.ReadLine();
-            Console.Write($"{PROMPT}login/password:"); STRING_Password = Console.ReadLine();
+            Console.Write($"{PROMPT}login/password:"); STRING_Password = ReadLine.ReadPassword();
+            Console.Write($"{PROMPT}login/password[retype]:"); STRING_PasswordRetype = ReadLine.ReadPassword();
 
-            if (STRING_Username.Length > 0 && STRING_Password.Length > 0)
+            if (STRING_Username.Length > 0 && STRING_Password.Length > 0 && STRING_PasswordRetype.Length > 0)
             {
-                httpResponseResult = backendInterface.Init(new { username = STRING_Username, password = STRING_Password }).GetAwaiter().GetResult();
-
-                if (httpResponseResult.StatusCode == HttpStatusCode.OK)
+                if (STRING_Password.Equals(STRING_PasswordRetype))
                 {
-                    Console.WriteLine($"Generated Init Identifier: {((InitResponse)httpResponseResult.OBJECT_RestResult).InitId}");
+                    try
+                    {
+                        httpResponseResult = backendInterface.Init(new { username = STRING_Username, password = STRING_Password }).GetAwaiter().GetResult();
 
-                    /* Creates the init_id.key file persistence */
-                    byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(((InitResponse)httpResponseResult.OBJECT_RestResult).InitId));
-                    File.WriteAllText("init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
+                        if (httpResponseResult.StatusCode == HttpStatusCode.OK)
+                        {
+                            Console.WriteLine($"Generated Init Identifier: {((InitResponse)httpResponseResult.OBJECT_RestResult).InitId}");
+
+                            /* Creates the init_id.key file persistence */
+                            byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(((InitResponse)httpResponseResult.OBJECT_RestResult).InitId));
+                            File.WriteAllText("init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
+                        }
+                        Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+                    }
+                    catch (System.Net.Http.HttpRequestException httpRequestException)
+                    {
+                        Console.WriteLine(String.Format("[E] - {0}", httpRequestException.Message));
+                    }
                 }
-                Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+                else
+                {
+                    Console.WriteLine("[E] - Password mismatch");
+
+                }
+            }
+            else
+            {
+                Console.WriteLine("[E] - Invalid credentials");
             }
         }
 
-        private  static void ManageLogin()
+        private static void ManageLogin()
         {
             string STRING_Username = String.Empty;
             string STRING_Password = String.Empty;
             HTTPResponseResult httpResponseResult = null;
 
             Console.Write($"{PROMPT}login/username:"); STRING_Username = Console.ReadLine();
-            Console.Write($"{PROMPT}login/password:"); STRING_Password = Console.ReadLine();
+            Console.Write($"{PROMPT}login/password:"); STRING_Password = ReadLine.ReadPassword();
 
             if (STRING_Username.Length > 0 && STRING_Password.Length > 0)
             {
-                
-                httpResponseResult = backendInterface.Login(new { username = STRING_Username, password = STRING_Password }, ProtectDataManager.Unprotect("init_id.key")).GetAwaiter().GetResult();
-                /*if (httpResponseResult.StatusCode == HttpStatusCode.OK)
+                try
                 {
-                    _STRING_LastJWTToken = httpResponseResult.STRING_JwtToken;
-                }*/
+                    httpResponseResult = backendInterface.Login(new { username = STRING_Username, password = STRING_Password }, ProtectDataManager.Unprotect("init_id.key")).GetAwaiter().GetResult();
 
-                Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
-
+                    Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+                }
+                catch (FileNotFoundException fileNotFoundException)
+                {
+                    Console.WriteLine(String.Format("[E] - {0}", fileNotFoundException.Message));
+                    Console.WriteLine(String.Format("[I] - Please /init the database first!"));
+                }
 
             }
         }
 
-        private async static void ManageCreatePassword()
+        private static void ManageCreatePassword()
         {
             PasswordEntryCreateDto newPassword = new PasswordEntryCreateDto();
             HTTPResponseResult httpResponseResult = null;
@@ -181,19 +201,44 @@ namespace NclVaultCLIClient
             Console.Write($"{PROMPT}create/password/expired:"); newPassword.Expired = DateTime.Parse(Console.ReadLine());
             Console.Write($"{PROMPT}create/password/notes:"); newPassword.Notes = Console.ReadLine();
             Console.Write($"{PROMPT}create/password/username:"); newPassword.Username = Console.ReadLine();
-            Console.Write($"{PROMPT}create/password/password:"); newPassword.Password = Console.ReadLine();
+            Console.Write($"{PROMPT}create/password/password:"); newPassword.Password = ReadLine.ReadPassword();
             Console.Write($"{PROMPT}create/password/url:"); newPassword.Url = Console.ReadLine();
 
-            httpResponseResult = await backendInterface.CreatePassword(newPassword);
-            if (httpResponseResult.StatusCode == HttpStatusCode.Created)
+            try
             {
-                //_STRING_LastJWTToken = httpResponseResult.STRING_JwtToken;
-                PasswordEntryReadDto passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
+                httpResponseResult = backendInterface.CreatePassword(newPassword).GetAwaiter().GetResult();
+                if (httpResponseResult.StatusCode == HttpStatusCode.Created)
+                {
+                    PasswordEntryReadDto passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
 
-                //Utils.PrintEntryTable(passwordEntryReadDto);
-
+                }
+                Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
             }
-            Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+            catch (InvalidOperationException invalidOperationException)
+            {
+                Console.WriteLine(String.Format("[E] - {0}", invalidOperationException.Message));
+                Console.WriteLine(String.Format("[I] - Please /login before create a new password!"));
+            }
+        }
+
+        private static void ManageRestore()
+        {
+            string STRING_InitId = String.Empty;
+
+            Console.Write($"{PROMPT}restore/initId:"); STRING_InitId = Console.ReadLine();
+
+            if (STRING_InitId.Length > 0)
+            {
+
+                /* Creates the init_id.key file persistence */
+                byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(STRING_InitId));
+                File.WriteAllText("init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
+                Console.WriteLine($"Generated Init Identifier File: {STRING_InitId}");
+            }
+            else
+            {
+                Console.WriteLine("[E] - Invalid credentials");
+            }
         }
     }
 }
