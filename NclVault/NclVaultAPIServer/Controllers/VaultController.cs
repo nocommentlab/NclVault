@@ -53,7 +53,7 @@ namespace NclVaultAPIServer.Controllers
         }
 
 
-        //GET /initvault/{STRING_Username} - 
+        //GET /initvault/{STRING_Username}
         [HttpGet]
         [Route("initvault/{STRING_Username}")]
         public ActionResult<CredentialReadDto> InitVault(string STRING_Username)
@@ -148,7 +148,7 @@ namespace NclVaultAPIServer.Controllers
             return CreatedAtAction(nameof(ReadPasswordById), new { ID = passwordEntry.Id }, passwordEntry);
         }
 
-        //PUT /update/password/{id}
+        //PUT /password/{id}
         [HttpPut]
         [Route("password/{id}")]
         public IActionResult UpdatePassword(int id, [FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
@@ -224,7 +224,7 @@ namespace NclVaultAPIServer.Controllers
             return _mapper.Map<PasswordEntryReadDto>(passwordEntry);
         }
 
-        //GET read/password/{id}
+        //GET /password/{id}
         [HttpGet]
         [Route("password/{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -258,7 +258,7 @@ namespace NclVaultAPIServer.Controllers
             return Ok(_mapper.Map<PasswordEntryReadDto>(passwordEntry));
         }
 
-        //GET read/password
+        //GET /password
         [HttpGet]
         [Route("password")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -295,91 +295,5 @@ namespace NclVaultAPIServer.Controllers
 
         //https://stackoverflow.com/questions/16015548/tool-for-sending-multipart-form-data-request
         //https://www.c-sharpcorner.com/article/upload-download-files-in-asp-net-core-2-0/
-        [HttpPost]
-        [Route("files/")]
-        public async Task<IActionResult> UploadFile(IFormFile file)
-        {
-            byte[] vBYTE_EncryptedPayload;
-
-            // Checks if the received file is null or empty
-            if (file == null || file.Length == 0)
-                return BadRequest();
-
-            // Extract the Credential element that has the same username received
-            /*Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
-
-            if (null == selectedCredential)
-            {
-                return Unauthorized();
-            }*/
-
-            /* Encrypts the content */
-            using (MemoryStream memoryStream = new MemoryStream())
-            {
-                await file.CopyToAsync(memoryStream);
-
-                vBYTE_EncryptedPayload = EncryptProvider.AESEncrypt(memoryStream.GetBuffer(), Request.Headers["InitId"]);
-
-            }
-
-            /* Writes the encrypted buffer to file */
-            using (var stream = new FileStream(file.FileName + ".enc", FileMode.Create))
-            {
-                await stream.WriteAsync(vBYTE_EncryptedPayload);
-            }
-
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("files/{filename}")]
-        public async Task<IActionResult> Download(string filename)
-        {
-            if (filename == null || Request.Headers["InitId"].Count == 0)
-                return BadRequest();
-
-            var encryptedPayload = new MemoryStream();
-            using (var stream = new FileStream(filename, FileMode.Open))
-            {
-                await stream.CopyToAsync(encryptedPayload);
-            }
-
-            byte[] decryptedPayload = EncryptProvider.AESDecrypt(encryptedPayload.ToArray(), Request.Headers["InitId"]);
-
-            var memory = new MemoryStream();
-            using (var stream = new FileStream(filename, FileMode.Open))
-            {
-                await stream.CopyToAsync(memory);
-            }
-            memory.Position = 0;
-            return File(decryptedPayload, "image/jpeg", "decrypted.jpg");
-        }
-
-
-        private string GetContentType(string path)
-        {
-            var types = GetMimeTypes();
-            var ext = Path.GetExtension(path).ToLowerInvariant();
-            return types[ext];
-        }
-
-        private Dictionary<string, string> GetMimeTypes()
-        {
-            return new Dictionary<string, string>
-            {
-                {".txt", "text/plain"},
-                {".pdf", "application/pdf"},
-                {".doc", "application/vnd.ms-word"},
-                {".docx", "application/vnd.ms-word"},
-                {".xls", "application/vnd.ms-excel"},
-                {".png", "image/png"},
-                {".jpg", "image/jpeg"},
-                {".jpeg", "image/jpeg"},
-                {".gif", "image/gif"},
-                {".csv", "text/csv"},
-                {".zip", "application/zip"}
-            };
-        }
     }
 }

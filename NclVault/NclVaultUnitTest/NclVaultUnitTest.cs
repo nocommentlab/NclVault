@@ -28,6 +28,7 @@ namespace NclVaultUnitTest
         private static PasswordEntryCreateDto _newPasswordEntry;
         private static int INT32_LastInsertedPasswordId;
         private static List<PasswordEntryCreateDto> _randomCredentials;
+        private static readonly IPEndPoint _vaultEndpoint = new IPEndPoint(IPAddress.Parse("192.168.1.216"), 443);
         #endregion
 
 
@@ -57,7 +58,7 @@ namespace NclVaultUnitTest
                 Password = "P@55w0rd"
             };
 
-            _backendInterface = BackendInterface.GetInstance(true);
+            _backendInterface = BackendInterface.GetInstance(_vaultEndpoint, true);
         }
 
         [TestMethod]
@@ -89,7 +90,7 @@ namespace NclVaultUnitTest
         [Description("Test the login process")]
         public void T1_003_DoLogin()
         {
-            _backendInterface = BackendInterface.GetInstance(true);
+            _backendInterface = BackendInterface.GetInstance(_vaultEndpoint, true);
             HTTPResponseResult httpReponseResult = _backendInterface.Login(_initCredential, _STRING_InitId).GetAwaiter().GetResult();
 
             Assert.AreEqual(httpReponseResult.StatusCode, HttpStatusCode.OK);
@@ -149,7 +150,7 @@ namespace NclVaultUnitTest
         [Description("Test the login process")]
         public void T2_002_DoLogin()
         {
-            _backendInterface = BackendInterface.GetInstance(true);
+            _backendInterface = BackendInterface.GetInstance(_vaultEndpoint, true);
             HTTPResponseResult httpReponseResult = _backendInterface.Login(_initCredential, _STRING_InitId).GetAwaiter().GetResult();
 
             Assert.AreEqual(httpReponseResult.StatusCode, HttpStatusCode.OK);

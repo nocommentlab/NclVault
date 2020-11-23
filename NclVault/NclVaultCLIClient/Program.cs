@@ -1,7 +1,8 @@
 ﻿using ConsoleTables;
 using NclVaultCLIClient.Attributes;
 using NclVaultCLIClient.Controllers;
-using NclVaultCLIClient.Models;
+using NclVaultFramework.Controllers;
+using NclVaultFramework.Models;
 using Newtonsoft.Json;
 using System;
 using System.Buffers.Text;
@@ -23,57 +24,67 @@ namespace NclVaultCLIClient
         private static bool BOOL_RequestExit = false;
         private static string STRING_LastCommand = String.Empty;
         private static BackendInterface backendInterface;
+        private static IPEndPoint _connectionProperties;
 
         static void Main(string[] args)
         {
-            ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler();
-            backendInterface = new BackendInterface();
+            
 
-            Utils.PrintBanner();
-
-            while (!BOOL_RequestExit)
+            _connectionProperties = Utils.ValidateConnectionProperties(args[0], args[1]);
+            if (null != _connectionProperties)
             {
-                STRING_LastCommand = ReadLine.Read(PROMPT);
-                switch (STRING_LastCommand)
+                ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler();
+                backendInterface = BackendInterface.GetInstance(_connectionProperties, true);
+
+                Utils.PrintBanner();
+
+                while (!BOOL_RequestExit)
                 {
-                    case "/exit":
-                    case "/quit":
-                        BOOL_RequestExit = true;
-                        break;
-                    case "/init":
-                    case "/i":
-                        ManageInit();
-                        break;
-                    case "/login":
-                    case "/l":
-                        ManageLogin();
-                        break;
-                    case "/readpassword":
-                    case "/rp":
-                        ManageReadPassword();
-                        break;
-                    case "/readpasswords":
-                    case "/rps":
-                        ManagerReadPasswords();
-                        break;
-                    case "/createpassword":
-                    case "/cp":
-                        ManageCreatePassword();
-                        break;
-                    case "/help":
-                    case "/h":
-                        Utils.PrintHelp();
-                        break;
-                    case "/restore":
-                    case "/r":
-                        ManageRestore();
-                        break;
-                    default:
-                        Console.WriteLine("[E] - Command not found");
-                        break;
+                    STRING_LastCommand = ReadLine.Read(PROMPT);
+                    switch (STRING_LastCommand)
+                    {
+                        case "/exit":
+                        case "/quit":
+                            BOOL_RequestExit = true;
+                            break;
+                        case "/init":
+                        case "/i":
+                            ManageInit();
+                            break;
+                        case "/login":
+                        case "/l":
+                            ManageLogin();
+                            break;
+                        case "/readpassword":
+                        case "/rp":
+                            ManageReadPassword();
+                            break;
+                        case "/readpasswords":
+                        case "/rps":
+                            ManagerReadPasswords();
+                            break;
+                        case "/createpassword":
+                        case "/cp":
+                            ManageCreatePassword();
+                            break;
+                        case "/help":
+                        case "/h":
+                            Utils.PrintHelp();
+                            break;
+                        case "/restore":
+                        case "/r":
+                            ManageRestore();
+                            break;
+                        default:
+                            Console.WriteLine("[E] - Command not found");
+                            break;
+                    }
                 }
             }
-            Console.Read();
+            else
+            {
+                Console.Write("[E] - Error during connection properties values");
+            }
         }
 
         private static void ManagerReadPasswords()
@@ -136,8 +147,7 @@ namespace NclVaultCLIClient
                 {
                     try
                     {
-                        httpResponseResult = backendInterface.Init(new { username = STRING_Username, password = STRING_Password }).GetAwaiter().GetResult();
-
+                        httpResponseResult = backendInterface.Init(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }).GetAwaiter().GetResult();
                         if (httpResponseResult.StatusCode == HttpStatusCode.OK)
                         {
                             Console.WriteLine($"Generated Init Identifier: {((InitResponse)httpResponseResult.OBJECT_RestResult).InitId}");
@@ -178,8 +188,8 @@ namespace NclVaultCLIClient
             {
                 try
                 {
-                    httpResponseResult = backendInterface.Login(new { username = STRING_Username, password = STRING_Password }, ProtectDataManager.Unprotect("init_id.key")).GetAwaiter().GetResult();
-
+                    
+                    httpResponseResult = backendInterface.Login(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }, ProtectDataManager.Unprotect("init_id.key")).GetAwaiter().GetResult();
                     Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
                 }
                 catch (FileNotFoundException fileNotFoundException)
