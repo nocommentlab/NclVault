@@ -65,7 +65,7 @@ namespace NclVaultUnitTest
         [Description("Test the init process")]
         public void T1_001_DoInit()
         {
-            HTTPResponseResult httpReponseResult = _backendInterface.Init(_initCredential).GetAwaiter().GetResult();
+            HTTPResponseResult httpReponseResult = _backendInterface.Signup(_initCredential).GetAwaiter().GetResult();
 
             _STRING_InitId = ((InitResponse)httpReponseResult.OBJECT_RestResult).InitId;
 

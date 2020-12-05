@@ -10,9 +10,11 @@ namespace NclVaultAPIServer.DTOs.CredentialDTO
     {
 
         [Required]
+        [RegularExpression(@"^[\w.]{3,20}$")]
         public string Username { get; set; }
 
         [Required]
+        //[RegularExpression("^((?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!$_])).{8,}$")]
         public string Password { get; set; }
     }
 }

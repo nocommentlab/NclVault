@@ -20,17 +20,20 @@ namespace NclVaultFramework.Controllers
         private const string READ_PASSWORD_API_ENDPOINT_URL = "https://192.168.1.216/vault/password/{0}";
         private const string READ_PASSWORDS_API_ENDPOINT_URL = "https://192.168.1.216/vault/password";
         private const string CREATE_PASSWORD_API_ENDPOINT_URL = "https://192.168.1.216/vault/password";*/
-        
+
         #endregion
         #region Members
         private readonly HttpClient _httpClient;
         private static BackendInterface _backendInterface;
 
-        private string STRING_Init_ApiEndpointUrl = "https://{0}:{1}/vault/initvault";
+        private string STRING_Init_ApiEndpointUrl = "https://{0}:{1}/vault/singup";
         private string STRING_Login_ApiEndpointUrl = "https://{0}:{1}/token/login";
+        private string STRING_Logout_ApiEndpointUrl = "https://{0}:{1}/token/logout";
+        private string STRING_CreatePassword_ApiEndpointUrl = "https://{0}:{1}/vault/password";
         private string STRING_ReadPassword_ApiEndpointUrl = "https://{0}:{1}/vault/password/";
         private string STRING_ReadPasswords_ApiEndpointUrl = "https://{0}:{1}/vault/password";
-        private string STRING_CreatePassword_ApiEndpointUrl = "https://{0}:{1}/vault/password";
+        private string STRING_UpdatePassword_ApiEndpointUrl = "https://{0}:{1}/vault/password/";
+        private string STRING_DeletePassword_ApiEndpointUrl = "https://{0}:{1}/vault/password/";
         #endregion
 
         private void ComposeVaultUrls(IPEndPoint nclVaultEndpont)
@@ -40,6 +43,9 @@ namespace NclVaultFramework.Controllers
             STRING_ReadPassword_ApiEndpointUrl = String.Format(STRING_ReadPassword_ApiEndpointUrl, nclVaultEndpont.Address, nclVaultEndpont.Port);
             STRING_ReadPasswords_ApiEndpointUrl = String.Format(STRING_ReadPasswords_ApiEndpointUrl, nclVaultEndpont.Address, nclVaultEndpont.Port);
             STRING_CreatePassword_ApiEndpointUrl = String.Format(STRING_CreatePassword_ApiEndpointUrl, nclVaultEndpont.Address, nclVaultEndpont.Port);
+            STRING_UpdatePassword_ApiEndpointUrl = String.Format(STRING_UpdatePassword_ApiEndpointUrl, nclVaultEndpont.Address, nclVaultEndpont.Port);
+            STRING_DeletePassword_ApiEndpointUrl = String.Format(STRING_DeletePassword_ApiEndpointUrl, nclVaultEndpont.Address, nclVaultEndpont.Port);
+            STRING_Logout_ApiEndpointUrl = String.Format(STRING_Logout_ApiEndpointUrl, nclVaultEndpont.Address, nclVaultEndpont.Port);
         }
 
         public BackendInterface(IPEndPoint nclVaultEndpont, bool sslVerificationBypass)
@@ -69,26 +75,7 @@ namespace NclVaultFramework.Controllers
             return _backendInterface;
         }
 
-        [Obsolete("UNSECURE Method. Use the Login(NetworkCredential) implementation")]
-        public async Task<HTTPResponseResult> Init(object body)
-        {
-            HTTPResponseResult httpResponseResult = new HTTPResponseResult();
-            string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(body);
-
-            HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(STRING_Init_ApiEndpointUrl,
-                                   new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
-
-            string responseContent = await httpResponseMessage.Content.ReadAsStringAsync();
-            httpResponseResult.OBJECT_RestResult = JsonConvert.DeserializeObject<InitResponse>(responseContent);
-
-            httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
-            httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
-
-            return httpResponseResult;
-
-        }
-
-        public async Task<HTTPResponseResult> Init(NetworkCredential credential)
+        public async Task<HTTPResponseResult> Signup(NetworkCredential credential)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
             string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(new
@@ -110,15 +97,14 @@ namespace NclVaultFramework.Controllers
 
         }
 
-        [Obsolete("UNSECURE Method. Use the Login(NetworkCredential, String) implementation")]
-        public async Task<HTTPResponseResult> Login(object body, string STRING_InitIdKey)
+        public async Task<HTTPResponseResult> Login(NetworkCredential credential)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
             try
             {
 
-                string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(body);
-                _httpClient.DefaultRequestHeaders.Add("InitId", STRING_InitIdKey);
+                string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(new { credential.UserName, credential.Password });
+
                 HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(STRING_Login_ApiEndpointUrl,
                                        new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
 
@@ -128,6 +114,8 @@ namespace NclVaultFramework.Controllers
                 {
                     httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
                     _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
+
+
                 }
             }
             catch (Exception ex)
@@ -137,34 +125,26 @@ namespace NclVaultFramework.Controllers
             return httpResponseResult;
         }
 
-        public async Task<HTTPResponseResult> Login(NetworkCredential credential, string STRING_InitIdKey)
+        public async Task<HTTPResponseResult> CreatePassword(PasswordEntryCreateDto newPassword)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
-            try
+            string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(newPassword);
+
+
+            HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(STRING_CreatePassword_ApiEndpointUrl,
+                                   new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
+
+            httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
+            httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+            string responseContent = await httpResponseMessage.Content.ReadAsStringAsync();
+            httpResponseResult.OBJECT_RestResult = JsonConvert.DeserializeObject<PasswordEntryReadDto>(responseContent);
+
+            if (httpResponseMessage.StatusCode == HttpStatusCode.Created)
             {
-
-                string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(new { credential.UserName, credential.Password });
-
-                _httpClient.DefaultRequestHeaders.Add("InitId", STRING_InitIdKey);
-
-
-                HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(STRING_Login_ApiEndpointUrl,
-                                       new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
-
-                httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
-                httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
-                if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
-                {
-                    httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
-                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
-
-
-                }
+                httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
             }
-            catch (Exception ex)
-            {
-                Console.Write(ex.Message);
-            }
+
             return httpResponseResult;
         }
 
@@ -198,11 +178,13 @@ namespace NclVaultFramework.Controllers
 
             httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
             httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
-            string responseContent = await httpResponseMessage.Content.ReadAsStringAsync();
-            httpResponseResult.OBJECT_RestResult = JsonConvert.DeserializeObject<List<PasswordEntryReadDto>>(responseContent);
+
 
             if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {
+
+                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync();
+                httpResponseResult.OBJECT_RestResult = JsonConvert.DeserializeObject<List<PasswordEntryReadDto>>(responseContent);
                 httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
             }
@@ -210,13 +192,13 @@ namespace NclVaultFramework.Controllers
             return httpResponseResult;
         }
 
-        public async Task<HTTPResponseResult> CreatePassword(PasswordEntryCreateDto newPassword)
+        public async Task<HTTPResponseResult> UpdatePassword(int INT32_Id, PasswordEntryCreateDto updatedPassword)
         {
             HTTPResponseResult httpResponseResult = new HTTPResponseResult();
-            string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(newPassword);
+            string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(updatedPassword);
 
 
-            HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync(STRING_CreatePassword_ApiEndpointUrl,
+            HttpResponseMessage httpResponseMessage = await _httpClient.PutAsync(STRING_UpdatePassword_ApiEndpointUrl + INT32_Id,
                                    new StringContent(STRING_SerializedJsonRequestBody, Encoding.UTF8, "application/json"));
 
             httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
@@ -230,6 +212,51 @@ namespace NclVaultFramework.Controllers
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
             }
 
+            return httpResponseResult;
+        }
+
+        public async Task<HTTPResponseResult> DeletePassword(int INT32_Id)
+        {
+            HTTPResponseResult httpResponseResult = new HTTPResponseResult();
+
+            HttpResponseMessage httpResponseMessage = await _httpClient.DeleteAsync(STRING_DeletePassword_ApiEndpointUrl + INT32_Id);
+
+            httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
+            httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+
+            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+            {
+                httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
+            }
+
+            return httpResponseResult;
+        }
+
+        public async Task<HTTPResponseResult> Logout()
+        {
+            HTTPResponseResult httpResponseResult = new HTTPResponseResult();
+            try
+            {
+
+                //string STRING_SerializedJsonRequestBody = JsonConvert.SerializeObject(new { credential.UserName, credential.Password });
+
+                HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync(STRING_Logout_ApiEndpointUrl);
+
+                httpResponseResult.StatusCode = httpResponseMessage.StatusCode;
+                httpResponseResult.StatusDescription = httpResponseMessage.ReasonPhrase;
+                if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+                {
+                    httpResponseResult.STRING_JwtToken = httpResponseMessage.Headers.GetValues("X-Token").Single();
+                    //_httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", httpResponseResult.STRING_JwtToken);
+
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message);
+            }
             return httpResponseResult;
         }
     }

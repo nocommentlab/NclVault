@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
+    <Folder Include="vault\" />
   </ItemGroup>
 
   <ItemGroup>

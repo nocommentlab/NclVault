@@ -57,6 +57,9 @@ namespace NclVaultAPIServer
 
             // Adds the database contect
             services.AddDbContext<VaultDbContext>();
+
+            // Adds the memory cache support to manage the JWT revocation
+            services.AddMemoryCache();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

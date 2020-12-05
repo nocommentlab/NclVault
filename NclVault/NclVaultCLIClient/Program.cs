@@ -1,20 +1,13 @@
-﻿using ConsoleTables;
-using NclVaultCLIClient.Attributes;
+﻿using ncl.net.cryptolybrary.Encryption.AES;
 using NclVaultCLIClient.Controllers;
 using NclVaultFramework.Controllers;
 using NclVaultFramework.Models;
-using Newtonsoft.Json;
 using System;
-using System.Buffers.Text;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Reflection;
-using System.Security;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace NclVaultCLIClient
 {
@@ -25,12 +18,13 @@ namespace NclVaultCLIClient
         private static string STRING_LastCommand = String.Empty;
         private static BackendInterface backendInterface;
         private static IPEndPoint _connectionProperties;
+        private static NetworkCredential _loggedUser;
 
         static void Main(string[] args)
         {
-            
 
             _connectionProperties = Utils.ValidateConnectionProperties(args[0], args[1]);
+
             if (null != _connectionProperties)
             {
                 ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler();
@@ -47,9 +41,9 @@ namespace NclVaultCLIClient
                         case "/quit":
                             BOOL_RequestExit = true;
                             break;
-                        case "/init":
-                        case "/i":
-                            ManageInit();
+                        case "/signup":
+                        case "/s":
+                            ManageSignup();
                             break;
                         case "/login":
                         case "/l":
@@ -67,6 +61,14 @@ namespace NclVaultCLIClient
                         case "/cp":
                             ManageCreatePassword();
                             break;
+                        case "/updatepassword":
+                        case "/up":
+                            ManageUpdatePassword();
+                            break;
+                        case "/deletepassword":
+                        case "/del":
+                            ManageDeletePassword();
+                            break;
                         case "/help":
                         case "/h":
                             Utils.PrintHelp();
@@ -74,6 +76,9 @@ namespace NclVaultCLIClient
                         case "/restore":
                         case "/r":
                             ManageRestore();
+                            break;
+                        case "/logout":
+                            ManageLogout();
                             break;
                         default:
                             Console.WriteLine("[E] - Command not found");
@@ -87,50 +92,14 @@ namespace NclVaultCLIClient
             }
         }
 
-        private static void ManagerReadPasswords()
+        private static void ManageLogout()
         {
-            HTTPResponseResult httpResponseResult = null;
-            httpResponseResult = backendInterface.ReadPasswords().GetAwaiter().GetResult();
-
-            if (httpResponseResult.StatusCode == HttpStatusCode.OK)
-            {
-                //_STRING_LastJWTToken = httpResponseResult.STRING_JwtToken;
-                List<PasswordEntryReadDto> passwordsEntryReadDto = (List<PasswordEntryReadDto>)httpResponseResult.OBJECT_RestResult;
-
-                Utils.PrintEntryTable<PasswordEntryReadDto>(passwordsEntryReadDto);
-
-            }
+            HTTPResponseResult httpResponseResult =  backendInterface.Logout().GetAwaiter().GetResult();
 
             Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
         }
 
-        private static void ManageReadPassword()
-        {
-            string STRING_PasswordId = String.Empty;
-            int INT32_PasswordId = -1;
-
-            HTTPResponseResult httpResponseResult = null;
-
-            Console.Write($"{PROMPT}read/password/id:"); STRING_PasswordId = Console.ReadLine();
-            if (int.TryParse(STRING_PasswordId, out INT32_PasswordId))
-            {
-                httpResponseResult = backendInterface.ReadPassword(INT32_PasswordId).GetAwaiter().GetResult();
-
-                if (httpResponseResult.StatusCode == HttpStatusCode.OK)
-                {
-                    //_STRING_LastJWTToken = httpResponseResult.STRING_JwtToken;
-                    PasswordEntryReadDto passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
-
-                    Utils.PrintEntryTable(passwordEntryReadDto);
-
-                }
-                Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
-
-            }
-
-        }
-
-        private static void ManageInit()
+        private static void ManageSignup()
         {
             string STRING_Username = String.Empty;
             string STRING_Password = String.Empty;
@@ -147,14 +116,17 @@ namespace NclVaultCLIClient
                 {
                     try
                     {
-                        httpResponseResult = backendInterface.Init(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }).GetAwaiter().GetResult();
+                        httpResponseResult = backendInterface.Signup(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }).GetAwaiter().GetResult();
                         if (httpResponseResult.StatusCode == HttpStatusCode.OK)
                         {
-                            Console.WriteLine($"Generated Init Identifier: {((InitResponse)httpResponseResult.OBJECT_RestResult).InitId}");
+                            Guid GUID_InitId = Guid.NewGuid();
+                            Console.WriteLine($"Generated Init Identifier: {GUID_InitId}");
 
                             /* Creates the init_id.key file persistence */
-                            byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(((InitResponse)httpResponseResult.OBJECT_RestResult).InitId));
-                            File.WriteAllText("init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
+                            byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(GUID_InitId.ToString()), STRING_Password);
+                            File.WriteAllText($"{STRING_Username}_init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
+
+
                         }
                         Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
                     }
@@ -174,7 +146,104 @@ namespace NclVaultCLIClient
                 Console.WriteLine("[E] - Invalid credentials");
             }
         }
+        private static void ManagerReadPasswords()
+        {
+            HTTPResponseResult httpResponseResult = null;
+            httpResponseResult = backendInterface.ReadPasswords().GetAwaiter().GetResult();
 
+            if (httpResponseResult.StatusCode == HttpStatusCode.OK)
+            {
+                List<PasswordEntryReadDto> passwordsEntryReadDto = (List<PasswordEntryReadDto>)httpResponseResult.OBJECT_RestResult;
+                for (int INT32_Id = 0; INT32_Id < passwordsEntryReadDto.Count; INT32_Id++)
+                {
+                    Console.Write("\r[I] - Decrypting credentials[{0}/{1}]", INT32_Id + 1, passwordsEntryReadDto.Count);
+                    passwordsEntryReadDto[INT32_Id].Password = AesProvider.AES_CBC_Decryption_Rand_IV(passwordsEntryReadDto[INT32_Id].Password,
+                                                                              ProtectDataManager.Unprotect($"{ _loggedUser.UserName}_init_id.key", _loggedUser.Password));
+                    Thread.Sleep(1);
+                }
+                Console.WriteLine();
+                Utils.PrintEntryTable<PasswordEntryReadDto>(passwordsEntryReadDto);
+
+            }
+
+            Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+        }
+        private static void ManageReadPassword()
+        {
+            string STRING_PasswordId = String.Empty;
+            int INT32_PasswordId = -1;
+
+            HTTPResponseResult httpResponseResult = null;
+
+            Console.Write($"{PROMPT}read/password/id:"); STRING_PasswordId = Console.ReadLine();
+            if (int.TryParse(STRING_PasswordId, out INT32_PasswordId))
+            {
+                httpResponseResult = backendInterface.ReadPassword(INT32_PasswordId).GetAwaiter().GetResult();
+
+                if (httpResponseResult.StatusCode == HttpStatusCode.OK)
+                {
+                    PasswordEntryReadDto passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
+                    passwordEntryReadDto.Password = AesProvider.AES_CBC_Decryption_Rand_IV(passwordEntryReadDto.Password,
+                                                                              ProtectDataManager.Unprotect($"{ _loggedUser.UserName}_init_id.key", _loggedUser.Password));
+                    Utils.PrintEntryTable(passwordEntryReadDto);
+
+                }
+                Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+
+            }
+
+        }
+        private static void ManageUpdatePassword()
+        {
+            string STRING_PasswordId = String.Empty;
+            int INT32_PasswordId = -1;
+
+            HTTPResponseResult httpResponseResult = null;
+
+            Console.Write($"{PROMPT}update/password/id:"); STRING_PasswordId = Console.ReadLine();
+            if (int.TryParse(STRING_PasswordId, out INT32_PasswordId))
+            {
+                httpResponseResult = backendInterface.ReadPassword(INT32_PasswordId).GetAwaiter().GetResult();
+                if (httpResponseResult.StatusCode == HttpStatusCode.OK)
+                {
+                    PasswordEntryCreateDto updatedPassword = new PasswordEntryCreateDto();
+
+                    PasswordEntryReadDto passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
+                    passwordEntryReadDto.Password = AesProvider.AES_CBC_Decryption_Rand_IV(passwordEntryReadDto.Password,
+                                                                              ProtectDataManager.Unprotect($"{ _loggedUser.UserName}_init_id.key", _loggedUser.Password));
+
+                    Console.Write($"{PROMPT}update/password/group[{passwordEntryReadDto.Group}]:"); updatedPassword.Group = Console.ReadLine();
+                    Console.Write($"{PROMPT}update/password/name[{passwordEntryReadDto.Name}]:"); updatedPassword.Name = Console.ReadLine();
+                    Console.Write($"{PROMPT}update/password/expired[{passwordEntryReadDto.Expired}]:"); updatedPassword.Expired = DateTime.Parse(Console.ReadLine());
+                    Console.Write($"{PROMPT}update/password/notes[{passwordEntryReadDto.Notes}]:"); updatedPassword.Notes = Console.ReadLine();
+                    Console.Write($"{PROMPT}update/password/username[{passwordEntryReadDto.Username}]:"); updatedPassword.Username = Console.ReadLine();
+                    Console.Write($"{PROMPT}update/password/password[{passwordEntryReadDto.Password}]:"); updatedPassword.Password = ReadLine.ReadPassword();
+                    Console.Write($"{PROMPT}update/password/url[{passwordEntryReadDto.Url}]:"); updatedPassword.Url = Console.ReadLine();
+
+                    updatedPassword.Password = AesProvider.AES_CBC_Encryption_Rand_IV(updatedPassword.Password,
+                                                                              ProtectDataManager.Unprotect($"{ _loggedUser.UserName}_init_id.key", _loggedUser.Password));
+                    try
+                    {
+                        httpResponseResult = backendInterface.UpdatePassword(INT32_PasswordId, updatedPassword).GetAwaiter().GetResult();
+                        if (httpResponseResult.StatusCode == HttpStatusCode.Created)
+                        {
+                            passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
+                            passwordEntryReadDto.Password = AesProvider.AES_CBC_Decryption_Rand_IV(passwordEntryReadDto.Password,
+                                                                              ProtectDataManager.Unprotect($"{ _loggedUser.UserName}_init_id.key", _loggedUser.Password));
+                            Utils.PrintEntryTable(passwordEntryReadDto);
+                        }
+                    }
+                    catch (InvalidOperationException invalidOperationException)
+                    {
+                        Console.WriteLine(String.Format("[E] - {0}", invalidOperationException.Message));
+                        Console.WriteLine(String.Format("[I] - Please /login before create a new password!"));
+                    }
+
+                    Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+                }
+            }
+            
+        }
         private static void ManageLogin()
         {
             string STRING_Username = String.Empty;
@@ -188,9 +257,11 @@ namespace NclVaultCLIClient
             {
                 try
                 {
-                    
-                    httpResponseResult = backendInterface.Login(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }, ProtectDataManager.Unprotect("init_id.key")).GetAwaiter().GetResult();
+
+                    httpResponseResult = backendInterface.Login(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }/*, ProtectDataManager.Unprotect("init_id.key")*/).GetAwaiter().GetResult();
                     Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+
+                    _loggedUser = new NetworkCredential { UserName = STRING_Username, Password = STRING_Password };
                 }
                 catch (FileNotFoundException fileNotFoundException)
                 {
@@ -200,37 +271,60 @@ namespace NclVaultCLIClient
 
             }
         }
-
         private static void ManageCreatePassword()
         {
             PasswordEntryCreateDto newPassword = new PasswordEntryCreateDto();
             HTTPResponseResult httpResponseResult = null;
 
-            Console.Write($"{PROMPT}create/password/group:"); newPassword.Group = Console.ReadLine();
-            Console.Write($"{PROMPT}create/password/name:"); newPassword.Name = Console.ReadLine();
-            Console.Write($"{PROMPT}create/password/expired:"); newPassword.Expired = DateTime.Parse(Console.ReadLine());
-            Console.Write($"{PROMPT}create/password/notes:"); newPassword.Notes = Console.ReadLine();
-            Console.Write($"{PROMPT}create/password/username:"); newPassword.Username = Console.ReadLine();
-            Console.Write($"{PROMPT}create/password/password:"); newPassword.Password = ReadLine.ReadPassword();
-            Console.Write($"{PROMPT}create/password/url:"); newPassword.Url = Console.ReadLine();
-
-            try
+            if (null != _loggedUser)
             {
-                httpResponseResult = backendInterface.CreatePassword(newPassword).GetAwaiter().GetResult();
-                if (httpResponseResult.StatusCode == HttpStatusCode.Created)
+                Console.Write($"{PROMPT}create/password/group:"); newPassword.Group = Console.ReadLine();
+                Console.Write($"{PROMPT}create/password/name:"); newPassword.Name = Console.ReadLine();
+                Console.Write($"{PROMPT}create/password/expired:"); newPassword.Expired = DateTime.Parse(Console.ReadLine());
+                Console.Write($"{PROMPT}create/password/notes:"); newPassword.Notes = Console.ReadLine();
+                Console.Write($"{PROMPT}create/password/username:"); newPassword.Username = Console.ReadLine();
+                Console.Write($"{PROMPT}create/password/password:"); newPassword.Password = ReadLine.ReadPassword();
+                Console.Write($"{PROMPT}create/password/url:"); newPassword.Url = Console.ReadLine();
+
+                newPassword.Password = AesProvider.AES_CBC_Encryption_Rand_IV(newPassword.Password,
+                                                                              ProtectDataManager.Unprotect($"{ _loggedUser.UserName}_init_id.key", _loggedUser.Password));
+
+                try
                 {
-                    PasswordEntryReadDto passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
-
+                    httpResponseResult = backendInterface.CreatePassword(newPassword).GetAwaiter().GetResult();
+                    if (httpResponseResult.StatusCode == HttpStatusCode.Created)
+                    {
+                        PasswordEntryReadDto passwordEntryReadDto = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
+                        Utils.PrintEntryTable(passwordEntryReadDto);
+                    }
+                    Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
                 }
-                Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+                catch (InvalidOperationException invalidOperationException)
+                {
+                    Console.WriteLine(String.Format("[E] - {0}", invalidOperationException.Message));
+                    Console.WriteLine(String.Format("[I] - Please /login before create a new password!"));
+                }
             }
-            catch (InvalidOperationException invalidOperationException)
+            else
             {
-                Console.WriteLine(String.Format("[E] - {0}", invalidOperationException.Message));
                 Console.WriteLine(String.Format("[I] - Please /login before create a new password!"));
             }
         }
+        private static void ManageDeletePassword()
+        {
+            string STRING_PasswordId = String.Empty;
+            int INT32_PasswordId = -1;
 
+            HTTPResponseResult httpResponseResult = null;
+
+            Console.Write($"{PROMPT}read/password/id:"); STRING_PasswordId = Console.ReadLine();
+            if (int.TryParse(STRING_PasswordId, out INT32_PasswordId))
+            {
+                httpResponseResult = backendInterface.DeletePassword(INT32_PasswordId).GetAwaiter().GetResult();
+
+                Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
+            }
+        }
         private static void ManageRestore()
         {
             string STRING_InitId = String.Empty;
@@ -241,7 +335,7 @@ namespace NclVaultCLIClient
             {
 
                 /* Creates the init_id.key file persistence */
-                byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(STRING_InitId));
+                byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(STRING_InitId), _loggedUser.Password);
                 File.WriteAllText("init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
                 Console.WriteLine($"Generated Init Identifier File: {STRING_InitId}");
             }
