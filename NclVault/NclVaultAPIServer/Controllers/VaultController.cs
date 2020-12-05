@@ -16,12 +16,13 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
+using ncl.net.cryptolybrary.Encryption.PBKDF2;
 using NclVaultAPIServer.Data;
 using NclVaultAPIServer.DTOs.CredentialDTO;
 using NclVaultAPIServer.DTOs.PasswordEntryDTO;
 using NclVaultAPIServer.Models;
 using NclVaultAPIServer.Utils;
-using NETCore.Encrypt;
+
 
 namespace NclVaultAPIServer.Controllers
 {
@@ -77,8 +78,9 @@ namespace NclVaultAPIServer.Controllers
             {
                 // Sets the passed Username
                 Username = credentialCreateDto.Username,
-                // Sets the passed Password - Sha256(<passed_password>+salt)
-                Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"))
+                // Sets the passed Password - Sha256(<passed_password>+salt) - OBSOLETE AND INSECURE!
+                //Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"))
+                Password = PBKDF2Provider.Generate(credentialCreateDto.Password.PadLeft(32, '*'))
             };
 
             // Adds the element to Credential table and save

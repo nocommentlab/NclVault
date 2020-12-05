@@ -20,6 +20,7 @@ namespace NclVaultCLIClient
         private static IPEndPoint _connectionProperties;
         private static NetworkCredential _loggedUser;
 
+
         static void Main(string[] args)
         {
 

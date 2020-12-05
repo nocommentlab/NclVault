@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Net.Http.Headers;
+using ncl.net.cryptolybrary.Encryption.PBKDF2;
 using NclVaultAPIServer.Data;
 using NclVaultAPIServer.DTOs.CredentialDTO;
 using NclVaultAPIServer.Utils;
@@ -54,12 +55,15 @@ namespace NclVaultAPIServer.Controllers
                 return BadRequest();
             }
 
-            /* Calculate the SHA256(<password>+SALT) */
-            string STRING_CalculatedSHA256Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"));
+            /* Calculate the SHA256(<password>+SALT) - OBSOLETE and INSECURE! */
+            //string STRING_CalculatedSHA256Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"));
+
+            var credential = _vaultDbContext.Credentials.Where(cred => cred.Username == credentialCreateDto.Username).FirstOrDefault();
 
             /* Checks the credential */
-            if (!_vaultDbContext.Credentials.Any(cred => cred.Username == credentialCreateDto.Username &&
-                                                         cred.Password == STRING_CalculatedSHA256Password))
+            if (credential !=null && 
+                !PBKDF2Provider.IsValid(credentialCreateDto.Password.PadLeft(32, '*'), credential.Password))
+                                                         //cred.Password == STRING_CalculatedSHA256Password))
             {
                 return Unauthorized();
             }
@@ -87,11 +91,11 @@ namespace NclVaultAPIServer.Controllers
             {
                 return BadRequest();
             }
-
+            
             _memoryCache.Set(Request.Headers[HeaderNames.Authorization], true, new MemoryCacheEntryOptions
             {
-                AbsoluteExpiration = DateTime.Now.AddMinutes(3),
-                SlidingExpiration = TimeSpan.FromMinutes(5)
+                AbsoluteExpiration = DateTime.Now.AddMinutes(_configuration.GetValue<int>("NCLVaultConfiguration:JWTConfiguration:CACHE_TOKEN_REPUDIATION_ABSOLUTE_MINUTES")),
+                SlidingExpiration = TimeSpan.FromMinutes(_configuration.GetValue<int>("NCLVaultConfiguration:JWTConfiguration:TOKEN_INACTIVITY_EXPIRATION_MINUTES"))
             });
 
             return Ok();
