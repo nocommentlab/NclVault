@@ -119,7 +119,7 @@ namespace NclVaultAPIServer.Controllers
             /* Assign the password entry foreign key with the logged credential primary key */
             passwordEntry.CredentialFK = selectedCredential.Id;
 
-            // Adds the entry password to EF and writes to the databae
+            // Adds the entry password to EF and writes to the database
             _vaultDbContext.Passwords.Add(passwordEntry);
             _vaultDbContext.SaveChanges();
 
@@ -139,8 +139,6 @@ namespace NclVaultAPIServer.Controllers
             {
                 return BadRequest();
             }
-
-            
 
             // Extract the Credential element that has the same username received
             Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();

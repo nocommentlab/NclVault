@@ -259,7 +259,7 @@ namespace NclVaultCLIClient
                 try
                 {
 
-                    httpResponseResult = backendInterface.Login(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }/*, ProtectDataManager.Unprotect("init_id.key")*/).GetAwaiter().GetResult();
+                    httpResponseResult = backendInterface.Login(new NetworkCredential { UserName = STRING_Username, Password = STRING_Password }).GetAwaiter().GetResult();
                     Console.WriteLine($"[{(int)httpResponseResult.StatusCode}] - [{httpResponseResult.StatusDescription}]");
 
                     _loggedUser = new NetworkCredential { UserName = STRING_Username, Password = STRING_Password };

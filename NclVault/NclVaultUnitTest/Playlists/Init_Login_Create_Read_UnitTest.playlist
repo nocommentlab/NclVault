@@ -166,6 +166,12 @@
                         <Property Name="DisplayName" Value="T1_005_ReadPasswordsStressTest" />
                       </Rule>
                     </Rule>
+                    <Rule Match="All">
+                      <Property Name="TestWithNormalizedFullyQualifiedName" Value="NclVaultUnitTest.NclVaultUnitTest.T1_001_DoSignup" />
+                      <Rule Match="Any">
+                        <Property Name="DisplayName" Value="T1_001_DoSignup" />
+                      </Rule>
+                    </Rule>
                   </Rule>
                 </Rule>
               </Rule>
