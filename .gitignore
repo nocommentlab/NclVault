@@ -350,4 +350,3 @@ MigrationBackup/
 .ionide/
 NclVault/NclVaultAPIServer/vault.db
 NclVault/NclVaultAPIServer/vault/vault.db
-!NclVault/NclVaultAPIServer/libs/*.dll
