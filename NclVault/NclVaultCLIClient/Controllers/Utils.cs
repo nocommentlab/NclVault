@@ -29,11 +29,12 @@ namespace NclVaultCLIClient.Controllers
         {
             ConsoleTable helpTable = new ConsoleTable("Command", "Description")
                      .AddRow("/[help|h]", "Shows this table")
-                     .AddRow("/[init|i]", "Initialize the database")
+                     .AddRow("/[singup|s]", "Create a new user")
                      .AddRow("/[login|l]", "Starts the login procedure")
                      .AddRow("/[readpassword|rp]", "Reads a single password by ID")
                      .AddRow("/[readpasswords|rps]", "Reads all passwords")
                      .AddRow("/[createpassword|cp]", "Creates a new password entry")
+                     .AddRow("/[updatepassword|up]", "Updates a password entry")
                      .AddRow("/exit|quit", "Exit");
 
             helpTable.Write(Format.Alternative);

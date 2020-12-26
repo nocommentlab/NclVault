@@ -349,3 +349,5 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 NclVault/NclVaultAPIServer/vault.db
+NclVault/NclVaultAPIServer/vault/vault.db
+!NclVault/NclVaultAPIServer/libs/*.dll

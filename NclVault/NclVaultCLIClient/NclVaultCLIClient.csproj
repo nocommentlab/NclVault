@@ -17,4 +17,10 @@
     <ProjectReference Include="..\NCLVaultFramework\NCLVaultFramework.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="NET.CryptoLibrary">
+      <HintPath>Libs\NET.CryptoLibrary\NET.CryptoLibrary.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

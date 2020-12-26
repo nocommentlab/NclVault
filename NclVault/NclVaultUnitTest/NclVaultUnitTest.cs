@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ncl.net.cryptolybrary.Encryption.AES;
 using NclVaultFramework.Controllers;
 using NclVaultFramework.Models;
 using System;
@@ -25,10 +26,9 @@ namespace NclVaultUnitTest
         private static BackendInterface _backendInterface;
         private static NetworkCredential _initCredential;
         private static string _STRING_InitId;
-        private static PasswordEntryCreateDto _newPasswordEntry;
-        private static int INT32_LastInsertedPasswordId;
         private static List<PasswordEntryCreateDto> _randomCredentials;
-        private static readonly IPEndPoint _vaultEndpoint = new IPEndPoint(IPAddress.Parse("192.168.1.216"), 443);
+        private static List<Guid> _randomPasswords;
+        private static readonly IPEndPoint _vaultEndpoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 5001);
         #endregion
 
 
@@ -37,25 +37,30 @@ namespace NclVaultUnitTest
         public static void InitDatabase(TestContext context)
         {
             _randomCredentials = new List<PasswordEntryCreateDto>();
+            _randomPasswords = new List<Guid>();
 
             for (int INT32_Idx = 0; INT32_Idx < CRED_NUMBER_STRESS_TEST; INT32_Idx++)
             {
+                Guid randomPassword = Guid.NewGuid();
+
                 _randomCredentials.Add(new PasswordEntryCreateDto
                 {
                     Username = $"{Guid.NewGuid()}",
-                    Password = $"{Guid.NewGuid()}",
+                    Password = $"{randomPassword}",
                     Expired = DateTime.Parse("01/01/1970"),
                     Group = $"{Guid.NewGuid()}",
                     Name = $"{Guid.NewGuid()}",
                     Url = $"{Guid.NewGuid()}",
                     Notes = $"{Guid.NewGuid()}"
                 });
+
+                _randomPasswords.Add(randomPassword);
             }
 
             _initCredential = new NetworkCredential
             {
-                UserName = "test_username",
-                Password = "P@55w0rd"
+                UserName = "nocommentlab",
+                Password = "!//Lab2020"
             };
 
             _backendInterface = BackendInterface.GetInstance(_vaultEndpoint, true);
@@ -63,15 +68,15 @@ namespace NclVaultUnitTest
 
         [TestMethod]
         [Description("Test the init process")]
-        public void T1_001_DoInit()
+        public void T1_001_DoSignup()
         {
-            HTTPResponseResult httpReponseResult = _backendInterface.Init(_initCredential).GetAwaiter().GetResult();
+            HTTPResponseResult httpReponseResult = _backendInterface.Signup(_initCredential).GetAwaiter().GetResult();
 
-            _STRING_InitId = ((InitResponse)httpReponseResult.OBJECT_RestResult).InitId;
+            
 
             Assert.AreEqual(httpReponseResult.StatusCode, HttpStatusCode.OK);
             Assert.AreNotEqual(httpReponseResult.OBJECT_RestResult, null);
-            Assert.IsTrue(((InitResponse)httpReponseResult.OBJECT_RestResult).InitId.Length > 0);
+            
 
 
         }
@@ -80,10 +85,14 @@ namespace NclVaultUnitTest
         [Description("Test the InitId protection mechanism")]
         public void T1_002_DoProtectInitId()
         {
-            byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(_STRING_InitId));
-            File.WriteAllText("init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
+            Guid GUID_InitId = Guid.NewGuid();
+            Console.WriteLine($"Generated Init Identifier: {GUID_InitId}");
 
-            Assert.IsTrue(File.Exists("init_id.key"));
+            /* Creates the init_id.key file persistence */
+            byte[] encryptedSecret = ProtectDataManager.Protect(Encoding.UTF8.GetBytes(GUID_InitId.ToString()), _initCredential.Password);
+            File.WriteAllText($"{_initCredential.UserName}_init_id.key", $"{Convert.ToBase64String(encryptedSecret)}");
+
+            Assert.IsTrue(File.Exists($"{_initCredential.UserName}_init_id.key"));
         }
 
         [TestMethod]
@@ -91,21 +100,21 @@ namespace NclVaultUnitTest
         public void T1_003_DoLogin()
         {
             _backendInterface = BackendInterface.GetInstance(_vaultEndpoint, true);
-            HTTPResponseResult httpReponseResult = _backendInterface.Login(_initCredential, _STRING_InitId).GetAwaiter().GetResult();
-
-            Assert.AreEqual(httpReponseResult.StatusCode, HttpStatusCode.OK);
-            Assert.AreNotEqual(httpReponseResult.STRING_JwtToken, null);
-            Assert.IsTrue(httpReponseResult.STRING_JwtToken.Length > 0);
+            
+            HTTPResponseResult httpResponseResult = _backendInterface.Login(_initCredential).GetAwaiter().GetResult();
+            Assert.AreEqual(httpResponseResult.StatusCode, HttpStatusCode.OK);
+            Assert.AreNotEqual(httpResponseResult.STRING_JwtToken, null);
+            Assert.IsTrue(httpResponseResult.STRING_JwtToken.Length > 0);
         }
 
         [TestMethod]
         [Description("Test the password creation process multiple time")]
         public void T1_004_CreatePasswordsStressTest()
         {
-
             foreach (PasswordEntryCreateDto randomCredential in _randomCredentials)
             {
-
+                randomCredential.Password = AesProvider.AES_CBC_Encryption_Rand_IV(randomCredential.Password,
+                                                                              ProtectDataManager.Unprotect($"{ _initCredential.UserName}_init_id.key", _initCredential.Password));
                 HTTPResponseResult httpResponseResult = _backendInterface.CreatePassword(randomCredential).GetAwaiter().GetResult();
 
                 Assert.AreEqual(httpResponseResult.StatusCode, HttpStatusCode.Created);
@@ -116,7 +125,6 @@ namespace NclVaultUnitTest
         [Description("Test the password read process")]
         public void T1_005_ReadPasswordsStressTest()
         {
-
 
             HTTPResponseResult httpResponseResult = _backendInterface.ReadPasswords().GetAwaiter().GetResult();
             Assert.AreEqual(httpResponseResult.StatusCode, HttpStatusCode.OK);
@@ -129,11 +137,10 @@ namespace NclVaultUnitTest
                 Assert.AreEqual(dumpedPassword[INT32_Idx].Group, _randomCredentials[INT32_Idx].Group);
                 Assert.AreEqual(dumpedPassword[INT32_Idx].Name, _randomCredentials[INT32_Idx].Name);
                 Assert.AreEqual(dumpedPassword[INT32_Idx].Notes, _randomCredentials[INT32_Idx].Notes);
-                Assert.AreEqual(dumpedPassword[INT32_Idx].Password, _randomCredentials[INT32_Idx].Password);
+                Assert.AreEqual(_randomPasswords[INT32_Idx].ToString(), AesProvider.AES_CBC_Decryption_Rand_IV(_randomCredentials[INT32_Idx].Password,
+                                            ProtectDataManager.Unprotect($"{ _initCredential.UserName}_init_id.key", _initCredential.Password)));
                 Assert.AreEqual(dumpedPassword[INT32_Idx].Url, _randomCredentials[INT32_Idx].Url);
                 Assert.AreEqual(dumpedPassword[INT32_Idx].Username, _randomCredentials[INT32_Idx].Username);
-
-
             }
         }
 
@@ -141,8 +148,8 @@ namespace NclVaultUnitTest
         [Description("Test the InitId unprotection mechanism")]
         public void T2_001_DoUnprotectInitId()
         {
-            Assert.IsTrue(File.Exists("init_id.key"));
-            _STRING_InitId = ProtectDataManager.Unprotect("init_id.key");
+            Assert.IsTrue(File.Exists($"{ _initCredential.UserName}_init_id.key"));
+            _STRING_InitId = ProtectDataManager.Unprotect($"{ _initCredential.UserName}_init_id.key", _initCredential.Password);
             Assert.IsTrue(_STRING_InitId.Length > 0);
         }
 
@@ -151,56 +158,13 @@ namespace NclVaultUnitTest
         public void T2_002_DoLogin()
         {
             _backendInterface = BackendInterface.GetInstance(_vaultEndpoint, true);
-            HTTPResponseResult httpReponseResult = _backendInterface.Login(_initCredential, _STRING_InitId).GetAwaiter().GetResult();
+            HTTPResponseResult httpReponseResult = _backendInterface.Login(_initCredential).GetAwaiter().GetResult();
 
             Assert.AreEqual(httpReponseResult.StatusCode, HttpStatusCode.OK);
             Assert.AreNotEqual(httpReponseResult.STRING_JwtToken, null);
             Assert.IsTrue(httpReponseResult.STRING_JwtToken.Length > 0);
         }
 
-        [TestMethod]
-        [Description("Test the password creation process")]
-        public void T2_003_CreatePassword()
-        {
-            _newPasswordEntry = new PasswordEntryCreateDto
-            {
-                Username = $"{Guid.NewGuid()}",
-                Password = $"{Guid.NewGuid()}",
-                Expired = DateTime.Parse("01/01/1970"),
-                Group = $"{Guid.NewGuid()}",
-                Name = $"{Guid.NewGuid()}",
-                Url = $"{Guid.NewGuid()}",
-                Notes = $"{Guid.NewGuid()}"
-            };
-
-            HTTPResponseResult httpResponseResult = _backendInterface.CreatePassword(_newPasswordEntry).GetAwaiter().GetResult();
-            INT32_LastInsertedPasswordId = ((PasswordEntryReadDto)(httpResponseResult.OBJECT_RestResult)).Id;
-            Assert.AreEqual(httpResponseResult.StatusCode, HttpStatusCode.Created);
-
-        }
-
-        [TestMethod]
-        [Description("Test the password read process")]
-        public void T2_004_ReadPassword()
-        {
-
-
-            HTTPResponseResult httpResponseResult = _backendInterface.ReadPassword(INT32_LastInsertedPasswordId).GetAwaiter().GetResult();
-            Assert.AreEqual(httpResponseResult.StatusCode, HttpStatusCode.OK);
-
-            PasswordEntryReadDto dumpedPassword = (PasswordEntryReadDto)httpResponseResult.OBJECT_RestResult;
-
-
-            Assert.AreEqual(dumpedPassword.Expired, _newPasswordEntry.Expired);
-            Assert.AreEqual(dumpedPassword.Group, _newPasswordEntry.Group);
-            Assert.AreEqual(dumpedPassword.Name, _newPasswordEntry.Name);
-            Assert.AreEqual(dumpedPassword.Notes, _newPasswordEntry.Notes);
-            Assert.AreEqual(dumpedPassword.Password, _newPasswordEntry.Password);
-            Assert.AreEqual(dumpedPassword.Url, _newPasswordEntry.Url);
-            Assert.AreEqual(dumpedPassword.Username, _newPasswordEntry.Username);
-
-
-
-        }
+        
     }
 }

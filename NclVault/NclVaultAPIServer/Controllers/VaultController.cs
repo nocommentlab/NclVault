@@ -12,14 +12,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
+using ncl.net.cryptolybrary.Encryption.PBKDF2;
 using NclVaultAPIServer.Data;
 using NclVaultAPIServer.DTOs.CredentialDTO;
 using NclVaultAPIServer.DTOs.PasswordEntryDTO;
 using NclVaultAPIServer.Models;
 using NclVaultAPIServer.Utils;
-using NETCore.Encrypt;
+
 
 namespace NclVaultAPIServer.Controllers
 {
@@ -35,6 +38,7 @@ namespace NclVaultAPIServer.Controllers
         private readonly VaultDbContext _vaultDbContext;
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
+        private readonly IMemoryCache _memoryCache;
         #endregion
 
         /// <summary>
@@ -43,59 +47,30 @@ namespace NclVaultAPIServer.Controllers
         /// <param name="vaultDbContext">The DB context</param>
         /// <param name="mapper">The Mapper service</param>
         /// <param name="configuration">The application configuration</param>
-        public VaultController(VaultDbContext vaultDbContext, IMapper mapper, IConfiguration configuration)
+        public VaultController(VaultDbContext vaultDbContext, IMapper mapper, IConfiguration configuration, IMemoryCache memoryCache)
         {
             _vaultDbContext = vaultDbContext;
             _mapper = mapper;
             _configuration = configuration;
-
-
-        }
-
-
-        //GET /initvault/{STRING_Username}
-        [HttpGet]
-        [Route("initvault/{STRING_Username}")]
-        public ActionResult<CredentialReadDto> InitVault(string STRING_Username)
-        {
-            // Checks if the vault has just an user
-            if (_vaultDbContext.Credentials.Count() > 0)
-            {
-                // Returns 401
-                return Unauthorized();
-            }
-
-            // Creates a Credential object
-            Credential credential = new Credential();
-            // Sets the Username passed
-            credential.Username = STRING_Username;
-            // Sets a random Password
-            credential.Password = Guid.NewGuid().ToString();
-
-            // Adds the element to Credential table and save
-            _vaultDbContext.Credentials.Add(credential);
-            _vaultDbContext.SaveChanges();
-
-            // Return the stored Credential
-            return Ok(_mapper.Map<CredentialReadDto>(credential));
+            _memoryCache = memoryCache;
 
         }
 
-        //POST /initvault
+        //POST /singup
         [HttpPost]
-        [Route("initvault")]
-        public ActionResult<InitResponse> InitVault([FromBody] CredentialCreateDto credentialCreateDto)
+        [Route("singup")]
+        public ActionResult<InitResponse> DoSignup([FromBody] CredentialCreateDto credentialCreateDto)
         {
-
+            /* Checks if the request body respects the Template Decorators of the CredentialCreateDto Objects */
             if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
 
-            // Checks if there is just another registered user
-            if (_vaultDbContext.Credentials.Count() > 0)
+            /* Checks if there's present a user with the same username */
+            if (_vaultDbContext.Credentials.Any(credential => credential.Username.Equals(credentialCreateDto.Username)))
             {
-                return Unauthorized();
+                return Unauthorized(); //401
             }
 
             // Creates a Credential object
@@ -103,8 +78,9 @@ namespace NclVaultAPIServer.Controllers
             {
                 // Sets the passed Username
                 Username = credentialCreateDto.Username,
-                // Sets the passed Password - Sha256(<passed_password>+salt)
-                Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"))
+                // Sets the passed Password - Sha256(<passed_password>+salt) - OBSOLETE AND INSECURE!
+                //Password = CryptoHelper.ComputeSha256Hash(credentialCreateDto.Password.PadLeft(32, '*') + _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "PASSWORD_SALT"))
+                Password = PBKDF2Provider.Generate(credentialCreateDto.Password.PadLeft(32, '*'))
             };
 
             // Adds the element to Credential table and save
@@ -112,9 +88,8 @@ namespace NclVaultAPIServer.Controllers
             _vaultDbContext.SaveChanges();
 
             // Returns the stored Credential
-            return Ok(new InitResponse { Username = credential.Username, InitId = Guid.NewGuid().ToString() });
+            return Ok(new InitResponse { Username = credential.Username });
         }
-
 
         //POST /password
         [HttpPost]
@@ -122,6 +97,8 @@ namespace NclVaultAPIServer.Controllers
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public IActionResult CreatePassword([FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
         {
+            bool BOOL_IsJWtTokenRepudied;
+
             if (!ModelState.IsValid)
             {
                 return BadRequest();
@@ -130,17 +107,19 @@ namespace NclVaultAPIServer.Controllers
             // Extract the Credential element that has the same username received
             Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
 
-            if (null == selectedCredential)
+            // Checks if the JWT token is repudied
+            _memoryCache.TryGetValue(Request.Headers[HeaderNames.Authorization], out BOOL_IsJWtTokenRepudied);
+            if (null == selectedCredential || BOOL_IsJWtTokenRepudied)
             {
                 return Unauthorized();
             }
 
             /* Sets the encrypted password using the InitId request header parameter as key*/
-            //passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
-            passwordEntryCreateDto.Password = EncryptProvider.AESEncrypt(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
             PasswordEntry passwordEntry = _mapper.Map<PasswordEntry>(passwordEntryCreateDto);
+            /* Assign the password entry foreign key with the logged credential primary key */
+            passwordEntry.CredentialFK = selectedCredential.Id;
 
-            // Adds the entry password to EF and writes to the databae
+            // Adds the entry password to EF and writes to the database
             _vaultDbContext.Passwords.Add(passwordEntry);
             _vaultDbContext.SaveChanges();
 
@@ -148,11 +127,14 @@ namespace NclVaultAPIServer.Controllers
             return CreatedAtAction(nameof(ReadPasswordById), new { ID = passwordEntry.Id }, passwordEntry);
         }
 
-        //PUT /password/{id}
-        [HttpPut]
+        //GET /password/{id}
+        [HttpGet]
         [Route("password/{id}")]
-        public IActionResult UpdatePassword(int id, [FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public ActionResult<PasswordEntryReadDto> DecryptedReadPasswordById(int id)
         {
+            bool BOOL_IsJWtTokenRepudied;
+
             if (!ModelState.IsValid)
             {
                 return BadRequest();
@@ -161,13 +143,83 @@ namespace NclVaultAPIServer.Controllers
             // Extract the Credential element that has the same username received
             Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
 
-            if (null == selectedCredential)
+            // Checks if the JWT token is repudied
+            _memoryCache.TryGetValue(Request.Headers[HeaderNames.Authorization], out BOOL_IsJWtTokenRepudied);
+            if (null == selectedCredential || BOOL_IsJWtTokenRepudied)
+            {
+                return Unauthorized();
+            }
+
+            // Extracts the PasswordEntry that has the received ID
+            PasswordEntry passwordEntry = _vaultDbContext.Passwords.SingleOrDefault(password => password.Id == id && password.CredentialFK == selectedCredential.Id);
+
+            if (null == passwordEntry)
+            {
+                return NotFound();
+            }
+
+            // Returns the PasswordEntry object
+            return Ok(_mapper.Map<PasswordEntryReadDto>(passwordEntry));
+        }
+
+        //GET /password
+        [HttpGet]
+        [Route("password")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public ActionResult<List<PasswordEntryReadDto>> DecryptedReadPassword()
+        {
+            bool BOOL_IsJWtTokenRepudied;
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            // Extract the Credential element that has the same username received
+            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+
+            // Checks if the JWT token is repudied
+            _memoryCache.TryGetValue(Request.Headers[HeaderNames.Authorization], out BOOL_IsJWtTokenRepudied);
+            if (null == selectedCredential || BOOL_IsJWtTokenRepudied)
+            {
+                return Unauthorized();
+            }
+
+            IEnumerable<PasswordEntry> passwordEntries = _vaultDbContext.Passwords.Where(cred => cred.CredentialFK == selectedCredential.Id);
+
+            if (passwordEntries.Count() == 0)
+            {
+                return NotFound();
+            }
+
+            // Returns the Mapped List<PasswordEntry> objects
+            return Ok(_mapper.Map<List<PasswordEntryReadDto>>(passwordEntries));
+        }
+
+        //PUT /password/{id}
+        [HttpPut]
+        [Route("password/{id}")]
+        public IActionResult UpdatePassword(int id, [FromBody] PasswordEntryCreateDto passwordEntryCreateDto)
+        {
+            bool BOOL_IsJWtTokenRepudied;
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            // Extract the Credential element that has the same username received
+            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+
+            // Checks if the JWT token is repudied
+            _memoryCache.TryGetValue(Request.Headers[HeaderNames.Authorization], out BOOL_IsJWtTokenRepudied);
+            if (null == selectedCredential || BOOL_IsJWtTokenRepudied)
             {
                 return Unauthorized();
             }
 
             // Extract the password entry with the requested ID
-            PasswordEntry passwordEntry = _vaultDbContext.Passwords.FirstOrDefault(element => element.Id == id);
+            PasswordEntry passwordEntry = _vaultDbContext.Passwords.FirstOrDefault(element => element.Id == id && element.CredentialFK == selectedCredential.Id);
             if (null == passwordEntry)
             {
                 return NotFound();
@@ -175,7 +227,7 @@ namespace NclVaultAPIServer.Controllers
 
             /* Sets the encrypted password using the InitId request header parameter as key*/
             //passwordEntryCreateDto.Password = CryptoHelper.EncryptString(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
-            passwordEntryCreateDto.Password = EncryptProvider.AESEncrypt(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
+            //passwordEntryCreateDto.Password = EncryptProvider.AESEncrypt(passwordEntryCreateDto.Password, Request.Headers["InitId"]);
 
             _mapper.Map(passwordEntryCreateDto, passwordEntry);
             _vaultDbContext.SaveChanges();
@@ -188,12 +240,25 @@ namespace NclVaultAPIServer.Controllers
         [Route("password/{id}")]
         public IActionResult DeletePassword(int id)
         {
+            bool BOOL_IsJWtTokenRepudied;
+
             if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
+
+            // Extract the Credential element that has the same username received
+            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
+            // Checks if the JWT token is repudied
+            _memoryCache.TryGetValue(Request.Headers[HeaderNames.Authorization], out BOOL_IsJWtTokenRepudied);
+            
+            if (null == selectedCredential || BOOL_IsJWtTokenRepudied)
+            {
+                return Unauthorized();
+            }
+
             // Extracts the PasswordEntry that has the received ID
-            PasswordEntry passwordEntry = _vaultDbContext.Passwords.SingleOrDefault(password => password.Id == id);
+            PasswordEntry passwordEntry = _vaultDbContext.Passwords.SingleOrDefault(password => password.Id == id && password.CredentialFK == selectedCredential.Id);
             if (null == passwordEntry)
             {
                 return NotFound();
@@ -224,74 +289,6 @@ namespace NclVaultAPIServer.Controllers
             return _mapper.Map<PasswordEntryReadDto>(passwordEntry);
         }
 
-        //GET /password/{id}
-        [HttpGet]
-        [Route("password/{id}")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public ActionResult<PasswordEntryReadDto> DecryptedReadPasswordById(int id)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest();
-            }
-
-            // Extracts the PasswordEntry that has the received ID
-            PasswordEntry passwordEntry = _vaultDbContext.Passwords.SingleOrDefault(password => password.Id == id);
-
-            if (null == passwordEntry)
-            {
-                return NotFound();
-            }
-
-            // Extract the Credential element that has the same username received
-            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
-
-            if (null == selectedCredential)
-            {
-                return Unauthorized();
-            }
-
-            // Decrypts the password using the InitId request header parameter as key
-            passwordEntry.Password = EncryptProvider.AESDecrypt(passwordEntry.Password, Request.Headers["InitId"]);
-
-            // Returns the PasswordEntry object
-            return Ok(_mapper.Map<PasswordEntryReadDto>(passwordEntry));
-        }
-
-        //GET /password
-        [HttpGet]
-        [Route("password")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public ActionResult<List<PasswordEntryReadDto>> DecryptedReadPassword()
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest();
-            }
-
-            if (_vaultDbContext.Passwords.Count() == 0)
-            {
-                return NotFound();
-            }
-
-            // Extract the Credential element that has the same username received
-            Credential selectedCredential = _vaultDbContext.Credentials.Where(credential => credential.Username.Equals(((ClaimsIdentity)HttpContext.User.Identity).FindFirst("username").Value)).FirstOrDefault();
-
-            if (null == selectedCredential)
-            {
-                return Unauthorized();
-            }
-
-            // Iterates over all PasswordEntry elements
-            foreach (PasswordEntry passwordEntry in _vaultDbContext.Passwords)
-            {
-                // Decrypts the password using the InitId request header parameter as key
-                passwordEntry.Password = EncryptProvider.AESDecrypt(passwordEntry.Password, Request.Headers["InitId"]);
-            }
-
-            // Returns the Mapped List<PasswordEntry> objects
-            return Ok(_mapper.Map<List<PasswordEntryReadDto>>(_vaultDbContext.Passwords));
-        }
 
         //https://stackoverflow.com/questions/16015548/tool-for-sending-multipart-form-data-request
         //https://www.c-sharpcorner.com/article/upload-download-files-in-asp-net-core-2-0/

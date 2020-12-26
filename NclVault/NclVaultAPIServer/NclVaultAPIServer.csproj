@@ -30,11 +30,12 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
+    <Folder Include="vault\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="NETCore.Encrypt">
-      <HintPath>libs\NETCore.Encrypt.dll</HintPath>
+    <Reference Include="NET.CryptoLibrary">
+      <HintPath>libs\NET.CryptoLibrary.dll</HintPath>
     </Reference>
   </ItemGroup>
 

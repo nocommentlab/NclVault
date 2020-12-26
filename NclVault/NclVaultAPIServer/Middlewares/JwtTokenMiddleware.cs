@@ -61,7 +61,7 @@ namespace NclVaultAPIServer.Middlewares
             var token = new JwtSecurityToken(
             issuer: _configuration.GetValue<string>("NCLVaultConfiguration:JWTConfiguration:ISSUER"),
               claims: identity.Claims,
-              expires: DateTime.Now.AddMinutes(_configuration.GetValue<int>("NCLVaultConfiguration:JWTConfiguration:TOKEN_INACTIVITY_EXPIRATION")),
+              expires: DateTime.Now.AddMinutes(_configuration.GetValue<int>("NCLVaultConfiguration:JWTConfiguration:TOKEN_INACTIVITY_EXPIRATION_MINUTES")),
               signingCredentials: credentials
             );
 
