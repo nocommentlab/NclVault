@@ -136,3 +136,4 @@ The below workflow shows how NCLVault permits the extraction of an entry from it
 - [ ] Random Password Generator Module
 - [ ] Permit Multiple Users
 - [ ] Write Recovery Strategy
+- [ ] Keepass Import Module
