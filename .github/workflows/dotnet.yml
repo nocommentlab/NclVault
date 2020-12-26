@@ -18,6 +18,6 @@ jobs:
       with:
         dotnet-version: 5.0.100
     - name: Restore dependencies
-      run: dotnet restore ./NclVault/
+      run: dotnet restore
     - name: Build
-      run: dotnet build --no-restore ./NclVault/NclVaultAPIServer/
+      run: dotnet build --no-restore
