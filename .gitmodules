@@ -1,0 +1,3 @@
+[submodule "NET.CryptoLibrary"]
+	path = NET.CryptoLibrary
+	url = https://github.com/nocommentlab/NET.CryptoLibrary.git
