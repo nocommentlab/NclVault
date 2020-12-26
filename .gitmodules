@@ -1,0 +1,3 @@
+[submodule "NETCore.CryptoLibrary"]
+	path = NETCore.CryptoLibrary
+	url = https://github.com/nocommentlab/NETCore.CryptoLibrary.git

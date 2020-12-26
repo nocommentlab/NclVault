@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using NclVaultAPIServer.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -30,7 +31,11 @@ namespace NclVaultAPIServer.Data
             /* Gets the database filename from the configuration file */
             _STRING_DatabaseName = _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_VAULT_FILENAME").ToString();
             
-
+            /* Checks if the folder that contains the database exists, otherwise create it */
+            if (!Directory.Exists(Path.GetDirectoryName(_STRING_DatabaseName)))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_STRING_DatabaseName));
+            }
         }
 
         public VaultDbContext(SqliteConnection sqliteConnection)
@@ -42,11 +47,11 @@ namespace NclVaultAPIServer.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            
+
             _sqliteConnection ??= InitializeSQLiteConnection(_STRING_DatabaseName, _configuration.GetSection("NCLVaultConfiguration").GetValue(typeof(string), "DB_ENCRYPTION_KEY").ToString());
-            
+
             options.UseSqlite(_sqliteConnection);
-            
+
         }
 
         private static SqliteConnection InitializeSQLiteConnection(string databaseFile, string STRING_EncryptionKey)

@@ -8,6 +8,7 @@ namespace NclVaultAPIServer.Models
 {
     public class Credential
     {
+        [Key]
         public int Id { get; set; }
         
         [Required]
@@ -15,6 +16,7 @@ namespace NclVaultAPIServer.Models
         
         [Required]
         public string Password { get; set; }
+        public ICollection<EntryBase> Entries { get; set; }
 
     }
 }
