@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <UserSecretsId>2c5a78e5-8ac8-4d03-8fe8-07c5b60dfe53</UserSecretsId>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <StartupObject></StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,7 +37,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\NET.CryptoLibrary\NET.CryptoLibrary\NET.CryptoLibrary\NET.CryptoLibrary.csproj" />
+    <Reference Include="NET.CryptoLibrary">
+      <HintPath>libs\NET.CryptoLibrary.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 
