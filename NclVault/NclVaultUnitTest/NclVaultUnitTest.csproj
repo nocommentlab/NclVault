@@ -15,10 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NCLVaultFramework\NCLVaultFramework.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="Playlists\" />
   </ItemGroup>
 
