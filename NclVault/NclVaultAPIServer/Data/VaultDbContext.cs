@@ -19,7 +19,7 @@ namespace NclVaultAPIServer.Data
         #endregion
 
         #region Database Tables
-        public DbSet<Credential> Credentials { get; set; }
+        public virtual DbSet<Credential> Credentials { get; set; }
         public DbSet<PasswordEntry> Passwords { get; set; }
 
         #endregion

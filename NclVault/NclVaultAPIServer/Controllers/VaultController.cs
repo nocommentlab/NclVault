@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 using AutoMapper;
 using it.ncl.netcore.cryptolibrary.Encryption.PBKDF2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,14 +9,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using NclVaultAPIServer.Data;
 using NclVaultAPIServer.DTOs.CredentialDTO;
 using NclVaultAPIServer.DTOs.PasswordEntryDTO;
 using NclVaultAPIServer.Models;
-using NclVaultAPIServer.Utils;
-
 
 namespace NclVaultAPIServer.Controllers
 {
