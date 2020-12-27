@@ -164,7 +164,7 @@ namespace NclVaultAPIServer.UnitTest
         }
 
         [Fact]
-        public void DoLogin_CredsNotExists_Ok()
+        public void DoLogin_CredsNotExists_Unauthorized()
         {
             // Arrange
             IConfiguration configuration = LoadConfiguration("appsettings.json");
@@ -173,7 +173,7 @@ namespace NclVaultAPIServer.UnitTest
             /* Adds some fake username */
             var data = new List<Credential>
             {
-                new Credential { Username = "nocommentlab", Password = PBKDF2Provider.Generate("!//Lab2023")  },
+                new Credential { Username = "user1", Password = PBKDF2Provider.Generate("!//Lab2023")  },
                 new Credential { Username = "user2" , Password = PBKDF2Provider.Generate("!//Lab2021")},
                 new Credential { Username = "user3" , Password = PBKDF2Provider.Generate("!//Lab2022")},
             }.AsQueryable();
@@ -197,8 +197,10 @@ namespace NclVaultAPIServer.UnitTest
             var initResponse = tokenController.DoLogin(new DTOs.CredentialDTO.CredentialCreateDto { Username = "antonio", Password = "!//Lab2020" });
 
             // Assert
-            Assert.IsType<OkResult>(initResponse);
+            Assert.IsType<UnauthorizedResult>(initResponse);
             //Assert.Equal((int)HttpStatusCode.Unauthorized, ((StatusCodeResult)initResponse).StatusCode);
         }
+
+        
     }
 }
